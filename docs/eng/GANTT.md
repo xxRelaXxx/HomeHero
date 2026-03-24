@@ -43,62 +43,63 @@
 }}%%
 
 gantt
-    title Smart Weather Station / Home Hero — GANTT Chart
+    title Smart Weather Station / Home Hero — Diagramma di GANTT
     dateFormat  YYYY-MM-DD
     axisFormat  %d/%m
 
-    section Project Kickoff
-    Team formation                    :done,    s1, 2025-12-02, 2025-12-06
-    Role assignment                   :done,    s2, after s1, 4d
-    Final idea definition             :done,    s3, after s2, 5d
-    Technical planning                :done,    s4, after s3, 8d
-    Individual study                  :done,    s5, 2025-12-16, 2026-01-07
+    section Avvio progetto
+    Formazione team                   :done,    s1, 2025-12-18, 2025-12-18
+    Assegnazione ruoli                :done,    s2, after s1, 4d
+    Definizione idea                  :done,    s3, after s2, 5d
+    Pianificazione tecnica            :done,    s4, after s3, 8d
+    Studio individuale                :done,    s5, 2025-12-20, 2026-01-12
 
-    section Initial Planning
-    Kick-off and team definition      :done,    p1, after s5, 2026-01-14
-    Requirements gathering            :done,    p2, after p1, 7d
-    Architecture decisions            :done,    p3, 2026-01-12, 2026-01-21
-    Development environment setup     :done,    p4, after p3, 7d
+    section Pianificazione iniziale
+    Kick-off e definizione team       :done,    p1, after s5, 2026-01-14
+    Raccolta requisiti                :done,    p2, after p1, 7d
+    Scelte architetturali             :done,    p3, 2026-01-12, 2026-01-21
+    Setup ambienti di sviluppo        :done,    p4, after p3, 7d
 
     section Backend — Roman
-    PostgreSQL / Supabase setup       :done,    b2, 2026-01-22, 2026-01-29
-    Laravel API development           :done,    b1, 2026-01-22, 2026-02-20
-    API security and authentication   :done,    b3, 2026-02-01, 2026-02-15
-    Endpoint testing                  :done,    b4, 2026-02-10, 2026-02-25
+    Setup PostgreSQL / Supabase       :done,    b2, 2026-01-22, 2026-01-29
+    Sviluppo Laravel API              :done,    b1, 2026-01-22, 2026-02-20
+    Sicurezza API e autenticazione    :done,    b3, 2026-02-01, 2026-02-15
+    Testing endpoint                  :done,    b4, 2026-02-10, 2026-02-25
 
-    section Hardware & Firmware — Shaeek
-    Sensor wiring                     :done,    h1, 2026-01-22, 2026-02-05
-    ESP32 firmware development        :done,    h2, 2026-01-22, 2026-02-22
-    Sensor calibration                :done,    h3, 2026-02-10, 2026-02-22
+    section Hardware e Firmware — Shaeek
+    Cablaggio sensori                 :done,    h1, 2026-01-22, 2026-02-05
+    Sviluppo firmware ESP32           :done,    h2, 2026-01-22, 2026-02-22
+    Calibrazione sensori              :done,    h3, 2026-02-10, 2026-02-22
 
-    section Frontend — Luka and De Togni
-    UI/UX design                      :done,    f1, 2026-01-22, 2026-02-10
-    React / Vite development          :done,    f2, 2026-01-28, 2026-03-07
-    API integration with Axios        :done,    f3, after f2, 10d
+    section Frontend — Luka e De Togni
+    Design UI/UX                      :done,    f1, 2026-01-22, 2026-02-10
+    Sviluppo React / Vite             :done,    f2, 2026-01-28, 2026-03-07
+    Integrazione API con Axios        :done,    f3, after f2, 10d
 
-    section Verification & Integration
-    First checkpoint                  :milestone, c1, 2026-01-28, 0d
-    First presentation                :milestone, c2, 2026-02-04, 0d
-    System integration                :milestone, c3, 2026-02-19, 0d
-    Technical completion objective    :milestone, c4, 2026-02-23, 0d
-    Hardware and data verification    :done,      c5, 2026-03-02, 2d
-    System integration testing        :done,      t1, 2026-02-20, 2026-03-07
-    Final QA checklist                :done,    t2, 2026-03-07, 2026-03-20
+    section Verifiche e integrazione
+    Definizione architettura          :milestone, c1, after p3, 0d
+    Primo checkpoint                  :milestone, c1, 2026-01-28, 0d
+    Prima presentazione               :milestone, c2, 2026-02-04, 0d
+    Integrazione sistema              :milestone, c3, 2026-02-19, 0d
+    Obiettivo completamento tecnico   :milestone, c4, 2026-02-23, 0d
+    Verifica hardware e dati         :done,      c5, 2026-03-02, 2d
+    Test integrazione sistema        :done,      t1, 2026-02-20, 2026-03-07
+    QA checklist finale              :done,    t2, 2026-03-07, 2026-03-20
 
-    section Documentation & Presentation
-    Technical documentation           :done,    d1, 2026-02-01, 2026-03-15
-    Economic analysis                 :done,    d2, 2026-02-20, 2026-03-15
-    RACI matrix and GANTT             :done,    d3, 2026-02-25, 2026-03-15
-    Knowledge sharing                 :done,      d4, 2026-03-03, 2026-03-08
-    Documentation complete            :milestone, d5, 2026-03-15, 0d
-    Presentation rehearsal            :milestone, d6, 2026-03-16, 0d
-    Presentation preparation          :done,    d7, 2026-03-07, 2026-03-25
+    section Documentazione e presentazione
+    Documentazione tecnica           :done,    d1, 2026-02-01, 2026-03-15
+    Analisi economica                :done,    d2, 2026-02-20, 2026-03-15
+    Matrice RACI e GANTT             :done,    d3, 2026-02-25, 2026-03-15
+    Condivisione conoscenze          :done,      d4, 2026-03-03, 2026-03-08
+    Completamento documentazione     :milestone, d5, 2026-03-15, 0d
+    Simulazione presentazione        :milestone, d6, 2026-03-16, 0d
+    Preparazione presentazione       :done,    d7, 2026-03-07, 2026-03-25
 
-    section Project Closure
-    Backend deploy on Railway         :done,      dp1, 2026-03-07, 2026-03-14
-    Frontend deploy on Netlify        :done,      dp2, 2026-03-07, 2026-03-14
-    Final demo                        :milestone, m3, 2026-03-21, 0d
-    Final presentation                :milestone, m4, 2026-03-26, 0d
+    section Chiusura
+    Deploy backend su Railway        :done,      dp1, 2026-03-07, 2026-03-14
+    Deploy frontend su Netlify       :done,      dp2, 2026-03-07, 2026-03-14
+    Demo finale                      :milestone, m3, 2026-03-21, 0d
+    Presentazione finale             :milestone, m4, 2026-03-26, 0d
 ```
 
 ---

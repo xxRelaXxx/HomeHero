@@ -48,11 +48,11 @@ gantt
     axisFormat  %d/%m
 
     section Avvio progetto
-    Formazione team                   :done,    s1, 2025-12-02, 2025-12-06
+    Formazione team                   :done,    s1, 2025-12-18, 2025-12-18
     Assegnazione ruoli                :done,    s2, after s1, 4d
-    Definizione idea finale           :done,    s3, after s2, 5d
+    Definizione idea                  :done,    s3, after s2, 5d
     Pianificazione tecnica            :done,    s4, after s3, 8d
-    Studio individuale                :done,    s5, 2025-12-16, 2026-01-07
+    Studio individuale                :done,    s5, 2025-12-20, 2026-01-12
 
     section Pianificazione iniziale
     Kick-off e definizione team       :done,    p1, after s5, 2026-01-14
@@ -77,6 +77,7 @@ gantt
     Integrazione API con Axios        :done,    f3, after f2, 10d
 
     section Verifiche e integrazione
+    Definizione architettura          :milestone, c1, after p3, 0d
     Primo checkpoint                  :milestone, c1, 2026-01-28, 0d
     Prima presentazione               :milestone, c2, 2026-02-04, 0d
     Integrazione sistema              :milestone, c3, 2026-02-19, 0d
