@@ -1,0 +1,30 @@
+#!/usr/bin/env php
+<?php
+
+use Illuminate\Foundation\Application;
+use Symfony\Component\Console\Input\ArgvInput;
+
+define('LARAVEL_START', microtime(true));
+
+// If someone calls `php artisan serve` (e.g. from a Procfile or platform),
+// run PHP built-in server directly to avoid invoking Laravel's ServeCommand
+// which can error on some platforms when PORT env is a string.
+$argv = $_SERVER['argv'] ?? [];
+if (in_array('serve', $argv, true)) {
+	$port = getenv('PORT') ?: getenv('SERVER_PORT') ?: '8080';
+	$port = (int) $port;
+	$cmd = sprintf('php -S 0.0.0.0:%d -t public public/router.php', $port);
+	passthru($cmd);
+	exit(0);
+}
+
+// Register the Composer autoloader...
+require __DIR__.'/vendor/autoload.php';
+
+// Bootstrap Laravel and handle the command...
+/** @var Application $app */
+$app = require_once __DIR__.'/bootstrap/app.php';
+
+$status = $app->handleCommand(new ArgvInput);
+
+exit($status);

@@ -1,0 +1,21 @@
+# Arduino / ESP32 libraries required by sketch.cpp
+# Install all of these via Arduino IDE → Sketch → Include Library → Manage Libraries
+# or via PlatformIO lib_deps in platformio.ini
+
+Adafruit BME680 Library          # BME680 temperature / humidity / pressure / gas sensor
+Adafruit BusIO                   # dependency of Adafruit sensor libraries
+Adafruit GFX Library             # graphics primitives for OLED displays
+Adafruit SH110X                  # SH1107 128×128 OLED display driver
+Adafruit SSD1306                 # SSD1306 128×64 OLED display driver
+BH1750                           # BH1750 ambient light sensor (I2C)
+ArduinoJson                      # JSON serialisation / deserialisation (v6 or v7)
+
+# Built-in ESP32 libraries (no installation needed — part of ESP32 Arduino core):
+#   WiFi           — WiFi connection
+#   HTTPClient     — HTTP POST to the API
+#   driver/i2s.h   — I2S bus for INMP441 microphone
+#   Wire.h         — I2C bus
+
+# ESP32 Arduino Core (board manager):
+#   URL: https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+#   Board: ESP32 Dev Module

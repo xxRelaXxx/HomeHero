@@ -1,0 +1,98 @@
+/* src/styles/dashboard/Dashboard.effects.css
+   Effetti background: immagine + scanlines + noise + grid.
+*/
+
+/* Layer base: immagine */
+.dashboard-bg {
+  /* usa la stessa SVG di Auth per coerenza visiva */
+  background-image: url("../img/backgroundImg.svg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  opacity: 0.16;
+  filter: saturate(0.9) contrast(1.06);
+
+  /* leggero movimento “cinematic” */
+  transform: scale(1.06);
+  transform-origin: center;
+  will-change: transform;
+  animation: dashboard-pan 58s linear infinite;
+}
+
+/* Griglia tecnica animata */
+.dashboard-grid-motion {
+  background-image:
+    linear-gradient(to right, rgba(30, 41, 59, 0.4) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(30, 41, 59, 0.4) 1px, transparent 1px);
+  background-size: 40px 40px;
+  will-change: background-position;
+  animation: dashboard-grid-drift 90s linear infinite;
+}
+
+/* Scanlines effetto CRT */
+.dashboard-scanlines {
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0,0,0,0) 0px,
+    rgba(0,0,0,0) 2px,
+    rgba(0,0,0,0.12) 3px
+  );
+  opacity: 0.20;
+  mix-blend-mode: overlay;
+  animation: dashboard-scan 10s linear infinite;
+}
+
+/* Noise per profondità */
+.dashboard-noise {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'140\' height=\'140\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'.85\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'140\' height=\'140\' filter=\'url(%23n)\' opacity=\'.22\'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+  opacity: 0.10;
+  mix-blend-mode: overlay;
+  will-change: background-position;
+  animation: dashboard-noise 14s linear infinite;
+}
+
+/* Keyframes */
+@keyframes dashboard-pan {
+  0%, 100% { transform: scale(1.06) translate3d(-1.2%, -0.8%, 0); }
+  50%      { transform: scale(1.06) translate3d( 1.2%,  0.8%, 0); }
+}
+
+@keyframes dashboard-grid-drift {
+  0%   { background-position: 0 0; }
+  100% { background-position: 220px 180px; }
+}
+
+@keyframes dashboard-scan {
+  0%   { background-position: 0 0; }
+  100% { background-position: 0 36px; }
+}
+
+@keyframes dashboard-noise {
+  0%   { background-position: 0 0; }
+  100% { background-position: 240px 420px; }
+}
+
+/* Riduci movimento se l’utente lo chiede a livello OS */
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-bg,
+  .dashboard-grid-motion,
+  .dashboard-scanlines,
+  .dashboard-noise {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* LIGHT THEME: mantieni gli effetti molto leggeri ma visibili anche sul tema chiaro */
+.hh-theme-light .dashboard-bg {
+  opacity: 0.08 !important;
+  filter: saturate(0.8) contrast(1.02);
+}
+.hh-theme-light .dashboard-scanlines,
+.hh-theme-light .dashboard-noise,
+.hh-theme-light .dashboard-grid-motion {
+  opacity: 0.04 !important;
+  animation: none !important;
+}

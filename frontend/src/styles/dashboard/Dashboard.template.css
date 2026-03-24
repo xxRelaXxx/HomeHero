@@ -1,0 +1,263 @@
+/* ============================================================
+ * DASHBOARD.CSS - Design System & Animation Layer
+ * ============================================================
+ * Architettura: 
+ * 1. Layer 0 (z-0): Background animato (pan/scan/noise/grid)
+ * 2. Layer 10 (z-10): Contenuto applicativo (glassmorphism)
+ * 
+ * Principi: GPU-accelerated transforms only, reduced-motion support,
+ * Tailwind v4 compatibility con estensioni custom.
+ * ============================================================ */
+
+@import "tailwindcss";
+
+/* -----------------------------------------------------------
+ * 0. THEME TOKENS (Design System)
+ * ----------------------------------------------------------- */
+.hh-theme-dark {
+  --hh-page-bg: #020617;
+  --hh-text: #e2e8f0;
+  --hh-muted: #94a3b8;
+  --hh-muted-2: #64748b;
+
+  --hh-surface-solid: #0f172a;
+  --hh-surface-hover: #0b1220;
+
+  --hh-header-surface: rgba(15, 23, 42, 0.8);
+  --hh-control-bg: #1e293b;
+  --hh-control-bg-hover: #334155;
+  --hh-control-border: #475569;
+
+  --hh-border: rgba(96, 104, 116, 0.95);
+  --hh-divider: rgba(100, 116, 139, 0.6);
+
+  --hh-chart-bg: rgba(15, 23, 42, 0.55);
+  --hh-chart-grid: #1e293b;
+  --hh-chart-tick: #64748b;
+
+  --hh-tooltip-bg: #0f172a;
+}
+
+.hh-theme-light {
+  --hh-page-bg: #f6f1e7;
+  --hh-text: #0f172a;
+  --hh-muted: #475569;
+  --hh-muted-2: #64748b;
+
+  --hh-surface-solid: rgba(255, 255, 255, 0.92);
+  --hh-surface-hover: rgba(255, 255, 255, 0.98);
+
+  --hh-header-surface: rgba(255, 255, 255, 0.85);
+  --hh-control-bg: rgba(15, 23, 42, 0.06);
+  --hh-control-bg-hover: rgba(15, 23, 42, 0.1);
+  --hh-control-border: rgba(15, 23, 42, 0.15);
+
+  --hh-border: rgba(15, 23, 42, 0.14);
+  --hh-divider: rgba(15, 23, 42, 0.12);
+
+  --hh-chart-bg: rgba(255, 255, 255, 0.82);
+  --hh-chart-grid: rgba(15, 23, 42, 0.18);
+  --hh-chart-tick: rgba(15, 23, 42, 0.55);
+
+  --hh-tooltip-bg: rgba(255, 255, 255, 0.96);
+}
+
+.hh-theme-dark,
+.hh-theme-light {
+  background-color: var(--hh-page-bg);
+  color: var(--hh-text);
+}
+
+/* -----------------------------------------------------------
+ * 1. GLOBAL RESETS & SCROLLBAR
+ * ----------------------------------------------------------- */
+body {
+  background-color: #020617; /* Slate 950 - fallback */
+  color: #e2e8f0;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar tecnica stile terminale */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #020617;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 3px;
+  transition: background 0.18s linear;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #06b6d4; /* Cyan 500 */
+}
+
+/* -----------------------------------------------------------
+ * 2. BACKGROUND ANIMATION SYSTEM (Layer 0)
+ * Ottimizzato per GPU: usa solo transform e opacity
+ * ----------------------------------------------------------- */
+
+/* Layer base: immagine con slow pan */
+.dashboard-bg {
+  background-size: cover;
+  background-position: center;
+  opacity: 0.12;
+  filter: saturate(0.85) contrast(1.08);
+  /* Scale > 1 per permettere pan senza bordi bianchi */
+  transform: scale(1.06);
+  will-change: transform;
+  animation: dashboard-pan 58s linear infinite;
+}
+
+/* Griglia tecnica animata */
+.dashboard-grid-motion {
+  background-image: 
+    linear-gradient(to right, rgba(30, 41, 59, 0.4) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(30, 41, 59, 0.4) 1px, transparent 1px);
+  background-size: 40px 40px;
+  will-change: background-position;
+  animation: dashboard-grid-drift 90s linear infinite;
+}
+
+/* Scanline CRT effect */
+.dashboard-scanlines {
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0,0,0,0) 0px,
+    rgba(0,0,0,0) 2px,
+    rgba(0,0,0,0.12) 3px
+  );
+  opacity: 0.20;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  animation: dashboard-scan 10s linear infinite;
+}
+
+/* Noise texture overlay per profondità */
+.dashboard-noise {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+  opacity: 0.10;
+  mix-blend-mode: overlay;
+  will-change: background-position;
+  animation: dashboard-noise 14s linear infinite;
+}
+
+/* -----------------------------------------------------------
+ * 2b. LIGHT THEME: riduce gli effetti per far “respirare” la palette chiara
+ * ----------------------------------------------------------- */
+.hh-theme-light .dashboard-bg,
+.hh-theme-light .dashboard-grid-motion,
+.hh-theme-light .dashboard-scanlines,
+.hh-theme-light .dashboard-noise {
+  opacity: 0 !important;
+  animation: none !important;
+}
+
+/* -----------------------------------------------------------
+ * 3. KEYFRAME ANIMATIONS
+ * ----------------------------------------------------------- */
+@keyframes dashboard-pan {
+  0%, 100% { transform: scale(1.06) translate3d(-1.2%, -0.8%, 0); }
+  50% { transform: scale(1.06) translate3d(1.2%, 0.8%, 0); }
+}
+
+@keyframes dashboard-grid-drift {
+  0% { background-position: 0 0; }
+  100% { background-position: 220px 180px; }
+}
+
+@keyframes dashboard-scan {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 36px; }
+}
+
+@keyframes dashboard-noise {
+  0% { background-position: 0 0; }
+  100% { background-position: 240px 420px; }
+}
+
+/* Status indicator pulse - ottimizzato per GPU */
+@keyframes pulse-green {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+.status-dot-online {
+  animation: pulse-green 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* -----------------------------------------------------------
+ * 4. UTILITY CLASSES SPECIFICHE
+ * ----------------------------------------------------------- */
+.glow-text-blue {
+  text-shadow: 0 0 20px rgba(6, 182, 212, 0.4);
+}
+
+/* Card sensori con glassmorphism */
+.sensor-card {
+  background: var(--hh-chart-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--hh-border);
+  /* Micro-interazione ottimizzata */
+  transition: transform 0.18s linear, box-shadow 0.18s linear;
+  will-change: transform;
+}
+
+.sensor-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 30px -10px rgba(6, 182, 212, 0.15);
+}
+
+/* Heatmap grid */
+.heatmap-cell {
+  transition: background-color 0.3s ease;
+}
+
+/* -----------------------------------------------------------
+ * 5. ACCESSIBILITY & REDUCED MOTION
+ * ----------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-bg,
+  .dashboard-grid-motion,
+  .dashboard-scanlines,
+  .dashboard-noise,
+  .status-dot-online {
+    animation: none !important;
+    transition: none !important;
+  }
+  .sensor-card:hover {
+    transform: none;
+  }
+}
+/* -----------------------------------------------------------
+ * 6. LIGHT THEME OVERRIDES
+ * ----------------------------------------------------------- */
+
+/* Chart title labels: bold in light theme */
+.hh-theme-light .hh-chart-label {
+  font-weight: bold;
+  color: #0f172a;
+}
+
+/* Sensor card styling for light theme */
+.hh-theme-light .sensor-card {
+  background-color: var(--hh-surface-solid);
+  border-color: var(--hh-border);
+}
+
+/* Glow effect adjustment for light theme */
+.hh-theme-light .glow-text-blue {
+  text-shadow: none;
+}
+
+/* Footer text color in light theme */
+.hh-theme-light footer {
+  color: #0f172a;
+}

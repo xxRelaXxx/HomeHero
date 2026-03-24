@@ -1,0 +1,69 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# HomeHero monorepo — root .gitignore
+# Covers: backend (Laravel), frontend (React/Vite), firmware (ESP32)
+# Also apply the per-subfolder .gitignore files for finer control.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── SECRETS — NEVER COMMIT ───────────────────────────────────────────────────
+.env
+.env.*
+!.env.example          # keep .env.example (safe template without real values)
+**/supabase pass*.txt
+**/*.key
+
+# ── BACKEND (Laravel) ─────────────────────────────────────────────────────────
+backend/vendor/
+backend/node_modules/
+backend/storage/logs/*.log
+backend/storage/*.key
+backend/bootstrap/cache/*.php
+backend/.phpunit.result.cache
+backend/.phpunit.cache/
+backend/database/database.sqlite
+backend/public/hot
+backend/public/storage
+backend/public/build
+backend/auth.json
+
+# ── FRONTEND (React / Vite) ───────────────────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# ── FIRMWARE (ESP32 / Arduino) ────────────────────────────────────────────────
+firmware/config.h          # NEVER commit — contains WiFi credentials
+firmware/.pio/
+firmware/.pioenvs/
+firmware/build/
+
+# ── OS / IDE ─────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── WINDOWS IDE / PROJECT FILES ───────────────────────────────────────────────
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.local
+
+# ── PACKAGE MANAGER LOGS ─────────────────────────────────────────────────────
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ── EXTRA FRONTEND ────────────────────────────────────────────────────────────
+frontend/dist-ssr/
+frontend/logs/
+
+# ── EXTRA BACKEND (Laravel) ───────────────────────────────────────────────────
+Homestead.json
+Homestead.yaml
+backend/.phpactor.json
+backend/storage/pail/

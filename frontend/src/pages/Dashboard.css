@@ -1,0 +1,7 @@
+/* src/pages/Dashboard.css
+   Entry CSS Dashboard: importa template + effects.
+   Tailwind va in src/index.css, non qui.
+*/
+
+@import "../styles/dashboard/Dashboard.template.css";
+@import "../styles/dashboard/Dashboard.effects.css";
