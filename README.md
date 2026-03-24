@@ -94,7 +94,7 @@
 | Service | URL |
 |---------|-----|
 | 🔌 API Health Check | [https://hhero.up.railway.app/api](https://hhero.up.railway.app/api) |
-| 🖥️ Dashboard | [https://your-site.netlify.app](https://your-site.netlify.app) |
+| 🖥️ Dashboard | [https://hohero.netlify.app](https://hohero.netlify.app) |
 
 ---
 
