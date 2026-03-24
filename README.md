@@ -111,7 +111,6 @@ HomeHero/
 │   ├── routes/api.php         All API route definitions
 │   ├── Dockerfile             Production container image
 │   ├── docker-compose.yml     Local development stack
-│   ├── Procfile               Railway start command
 │   └── .env.example           Environment variable template
 │
 ├── frontend/                  React + Vite dashboard  (Luka · De Togni)

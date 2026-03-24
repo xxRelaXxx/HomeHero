@@ -18,7 +18,7 @@
 [![Licenza: MIT](https://img.shields.io/badge/Licenza-MIT-22c55e?style=flat-square)](LICENSE)
 
 [![API su Railway](https://img.shields.io/badge/API-Railway-0B0D0E?style=flat-square&logo=railway&logoColor=white)](https://hhero.up.railway.app/api)
-[![Dashboard su Netlify](https://img.shields.io/badge/Dashboard-Netlify-00C7B7?style=flat-square&logo=netlify&logoColor=white)](https://your-site.netlify.app)
+[![Dashboard su Netlify](https://img.shields.io/badge/Dashboard-Netlify-00C7B7?style=flat-square&logo=netlify&logoColor=white)](https://hohero.netlify.app)
 
 [🇬🇧 Read in English](README.md) &nbsp;|&nbsp; [📖 Documentazione](docs/) &nbsp;|&nbsp; [🔌 API Live](https://hhero.up.railway.app/api)
 
@@ -92,7 +92,7 @@
 | Servizio | URL |
 |----------|-----|
 | 🔌 Health Check API | [https://hhero.up.railway.app/api](https://hhero.up.railway.app/api) |
-| 🖥️ Dashboard | [https://your-site.netlify.app](https://your-site.netlify.app) |
+| 🖥️ Dashboard | [https://hohero.netlify.app](https://hohero.netlify.app) |
 
 ---
 
@@ -109,7 +109,6 @@ HomeHero/
 │   ├── routes/api.php         Definizione di tutte le route API
 │   ├── Dockerfile             Immagine container per la produzione
 │   ├── docker-compose.yml     Stack di sviluppo locale
-│   ├── Procfile               Comando di avvio Railway
 │   └── .env.example           Template variabili d'ambiente
 │
 ├── frontend/                  Dashboard React + Vite  (Luka · De Togni)

@@ -6,7 +6,6 @@
 
 # ── SECRETS — NEVER COMMIT ───────────────────────────────────────────────────
 .env
-.env.*
 !.env.example          # keep .env.example (safe template without real values)
 **/supabase pass*.txt
 **/*.key
