@@ -225,7 +225,7 @@ cp config.example.h config.h
 | **Luka** | Frontend — React dashboard, Vite, charts, Netlify deployment; PM |
 | **Shaeek** | Firmware — ESP32 C++, sensor integration, hardware |
 | **Matteo** | Documentation |
-| **De Togni** | UI/UX, documentation |
+| **De Togni** | UI/UX, economical analysis|
 
 ---
 
