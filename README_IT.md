@@ -219,11 +219,11 @@ cp config.example.h config.h
 
 | Membro | Ruolo Principale |
 |--------|-----------------|
-| **Roman** | Backend — Laravel API, progettazione database, deploy Railway |
-| **Luka** | Frontend — dashboard React, Vite, grafici, deploy Netlify |
+| **Roman** | Backend — Laravel API, progettazione database, deploy Railway; Project architect |
+| **Luka** | Frontend — dashboard React, Vite, grafici, deploy Netlify; PM |
 | **Shaeek** | Firmware — C++ per ESP32, integrazione sensori, hardware |
-| **Matteo** | Documentazione, gestione del progetto |
-| **De Togni** | Frontend, documentazione |
+| **Matteo** | Documentazione |
+| **De Togni** | UI/UX, analisi economica |
 
 ---
 
