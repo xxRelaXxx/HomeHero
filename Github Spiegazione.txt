@@ -1,0 +1,41 @@
+git init
+
+
+git add .
+
+git commit -m "Commento di cosa mettere"
+
+git remote add origin <REMOTE_URL> 
+
+git remote add origin https://github.com/KL0VAN/TAXpedia.git
+
+// Una sola volta per connetere il pc al repository
+
+git push -u origin main 
+
+// anche una volta sola definire la branch principale la cartella principale
+
+
+
+
+
+git add .
+
+git commit -m "Commento di cosa mettere"
+
+git push
+
+
+
+git@github.com:KL0VAN/TAXpedia.git
+
+
+PER CAMBIARE DA MASTER A MAIN
+
+
+git branch -m master main
+
+git push -u origin main
+
+git push origin --delete master
+
