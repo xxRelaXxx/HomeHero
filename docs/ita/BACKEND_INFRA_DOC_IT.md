@@ -805,7 +805,7 @@ Ogni controller, model, migration e file di route contiene commenti inline detta
 - Il flusso dei dati dalla richiesta HTTP in ingresso al database e ritorno.
 - Gli edge case gestiti (es. `firstOrCreate()` per l'auto-registrazione di nuovi dispositivi).
 
-I file di documentazione esterni (`ARCHITECTURE.md`, `Communication.md`, `BACKEND_AND_DB_DEEP_DIVE.txt`) forniscono spiegazioni di livello piu alto, diagrammi ER, tabelle di riferimento API e dimostrazioni della normalizzazione.
+I file di documentazione esterni (`CONSTRAINTS_RISKMANAGEMENT.md`, `BACKEND_INFRA_DOC_IT.md`) forniscono spiegazioni di livello piu alto, diagrammi ER, tabelle di riferimento API e dimostrazioni della normalizzazione.
 
 #### Configurazione basata su ambiente
 
