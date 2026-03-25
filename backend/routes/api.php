@@ -34,8 +34,8 @@ Route::post('/device/data', [TelemetryController::class, 'store']);
 // Protected User Routes (Dashboard)
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/user', [UserController::class, 'profile']);
-    Route::put('/user/profile', [UserController::class, 'updateProfile']);
+    // Route::get('/user', [UserController::class, 'profile']);
+    // Route::put('/user/profile', [UserController::class, 'updateProfile']);
 
     // Fetch data for the dashboard graph
     Route::get('/telemetry', [TelemetryController::class, 'index']);

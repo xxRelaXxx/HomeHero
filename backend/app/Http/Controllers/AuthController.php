@@ -82,8 +82,21 @@ class AuthController extends Controller
         }
 
         $token = $user->createToken('myapptoken')->plainTextToken;
-
+        
         return response()->json(['user' => $user, 'token' => $token], 201);
+        }
+        
+
+    // ── logout() ──────────────────────────────────────────────────────────────
+    // Revokes ALL tokens for the currently authenticated user.
+    // This is a hard logout: every device/browser session is invalidated.
+    // Route is inside auth:sanctum group, so $request->user() is always available here.
+    public function logout(Request $request) {
+        // tokens() returns a HasMany query builder on personal_access_tokens
+        // filtered to this user's id. delete() issues a DELETE WHERE tokenable_id = ?
+        auth()->user()->tokens()->delete();
+
+        return response()->json(['message' => 'Logged out']);
     }
 
     // Google OAuth flow — commented out until Socialite is configured.
@@ -119,15 +132,4 @@ class AuthController extends Controller
     //     return redirect(env('FRONTEND_URL', 'http://localhost:5173') . '/auth/callback?token=' . $token . '&provider=google&needs_password=' . $needsPassword);
     // }
 
-    // ── logout() ──────────────────────────────────────────────────────────────
-    // Revokes ALL tokens for the currently authenticated user.
-    // This is a hard logout: every device/browser session is invalidated.
-    // Route is inside auth:sanctum group, so $request->user() is always available here.
-    public function logout(Request $request) {
-        // tokens() returns a HasMany query builder on personal_access_tokens
-        // filtered to this user's id. delete() issues a DELETE WHERE tokenable_id = ?
-        auth()->user()->tokens()->delete();
-
-        return response()->json(['message' => 'Logged out']);
-    }
 }

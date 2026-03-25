@@ -60,12 +60,12 @@ export const telemetryAPI = {
 };
 
 // Funzioni per leggere e aggiornare i dati del profilo utente.
-export const userAPI = {
-  // Recupera i dati del profilo dell'utente loggato.
-  getProfile: () => api.get('/user'),
-  // Aggiorna i dati del profilo con i valori passati.
-  updateProfile: (data) => api.put('/user/profile', data),
-};
+// export const userAPI = {
+//   // Recupera i dati del profilo dell'utente loggato.
+//   getProfile: () => api.get('/user'),
+//   // Aggiorna i dati del profilo con i valori passati.
+//   updateProfile: (data) => api.put('/user/profile', data),
+// };
 
 // Funzioni per leggere e modificare le impostazioni del dispositivo.
 export const deviceAPI = {
