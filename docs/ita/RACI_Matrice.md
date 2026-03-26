@@ -38,25 +38,25 @@
 
 | # | Attività | Roman (RO) | Luka (LU) | De Togni (DT) | Matteo (MA) | Shaeek (SH) |
 |:-:|----------|:----------:|:---------:|:-------------:|:-----------:|:-----------:|
-| 1 | Definizione idea e requisiti del progetto | **A/R** | R | C | C | C |
+| 1 | Definizione idea e requisiti del progetto | **R** | A | C | C | C |
 | 2 | Scelte architetturali e stack tecnologico | **A/R** | C | I | I | C |
 | 3 | Sviluppo backend — Laravel API | **A/R** | I | I | I | I |
 | 4 | Gestione database (PostgreSQL / Supabase) | **A/R** | I | I | I | I |
 | 5 | Sviluppo firmware ESP32 | C | I | I | I | **A/R** |
-| 6 | Cablaggio sensori e assemblaggio hardware | I | I | I | I | **A/R** |
+| 6 | Cablaggio sensori e assemblaggio hardware | C | I | I | I | **A/R** |
 | 7 | Sviluppo frontend (React / Vite) | I | **A/R** | C | I | I |
 | 8 | Design UI/UX | C | C | **A/R** | I | I |
 | 9 | Integrazione API (frontend ↔ backend) | C | **A/R** | I | C | I |
 | 10 | Deploy backend (Railway) | **A/R** | I | I | I | I |
 | 11 | Deploy frontend (Netlify) | **A** | R | I | I | I |
-| 12 | Testing funzionale durante lo sviluppo | R | R | I | C | R |
+| 12 | Testing funzionale durante lo sviluppo | R | R | I | A | R |
 | 13 | QA / Test checklist finale | C | C | C | **A/R** | C |
-| 14 | Documentazione tecnica | C | I | C | **A/R** | I |
+| 14 | Documentazione tecnica | C | C | I | **A/R** | C |
 | 15 | Analisi economica | C | I | **A/R** | I | I |
-| 16 | Diagramma GANTT e fasi progetto | I | I | **A/R** | I | I |
-| 17 | Matrice RACI | I | I | **A/R** | I | I |
-| 18 | Preparazione slide presentazione | C | I | C | **A/R** | I |
-| 19 | Presentazione finale al professore | C | C | C | **A/R** | I |
+| 16 | Diagramma GANTT e fasi progetto | C | C | **A/R** | I | I |
+| 17 | Matrice RACI | C | C | **A/R** | I | I |
+| 18 | Preparazione slide presentazione | C | C | **A/R** | C | C |
+| 19 | Presentazione finale al professore | C | C | **A/R** | C | C |
 
 ---
 
