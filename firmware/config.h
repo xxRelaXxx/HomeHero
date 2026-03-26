@@ -1,4 +1,0 @@
-#define WIFI_SSID      "{YOUR_WIFI_SSID}"
-#define WIFI_PASSWORD  "{YOUR_WIFI_PASSWORD}"
-#define API_BASE_URL   "https://{YOUR_API_URL}/api"
-#define DEVICE_NAME    "{YOUR_DEVICE_NAME}"

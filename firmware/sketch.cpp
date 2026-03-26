@@ -11,10 +11,6 @@
 #include <time.h>
 #include <math.h>
 
-// Configuration file — copy config.example.h → config.h and fill in your values.
-// config.h is NOT tracked by git (see .gitignore).
-#include "config.h"
-
 /* ================= PIN ================= */
 #define I2S_WS   27
 #define I2S_SCK  14
