@@ -185,6 +185,8 @@ npm run dev                 # → http://localhost:5173
 
 ### Firmware (ESP32)
 
+Install Arduino IDE: https://docs.arduino.cc/software/ide/
+
 ```bash
 # 1. Navigate to the firmware folder
 cd firmware
