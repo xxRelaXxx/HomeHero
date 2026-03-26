@@ -143,6 +143,8 @@ HomeHero/
 
 ### Backend (Laravel API)
 
+Install composer: https://getcomposer.org/download/
+
 ```bash
 cd backend
 
