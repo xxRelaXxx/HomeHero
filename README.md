@@ -169,6 +169,8 @@ docker-compose up --build   # → http://localhost:8000/api
 
 ### Frontend (React + Vite)
 
+Install node: https://nodejs.org/en/download
+
 ```bash
 cd frontend
 
