@@ -36,27 +36,27 @@
 
 ## RACI Matrix
 
-| # | Activity | Roman (RO) | Luka (LU) | De Togni (DT) | Matteo (MA) | Shaeek (SH) |
-|:-:|----------|:----------:|:---------:|:-------------:|:-----------:|:-----------:|
-| 1 | Project idea & requirements definition | **A/R** | R | C | C | C |
-| 2 | Architecture & technology stack decisions | **A/R** | C | I | I | C |
-| 3 | Backend development — Laravel API | **A/R** | I | I | I | I |
-| 4 | Database management (PostgreSQL / Supabase) | **A/R** | I | I | I | I |
-| 5 | ESP32 firmware development | C | I | I | I | **A/R** |
-| 6 | Sensor wiring & hardware assembly | I | I | I | I | **A/R** |
-| 7 | Frontend development (React / Vite) | I | **A/R** | C | I | I |
-| 8 | UI/UX design | C | C | **A/R** | I | I |
-| 9 | API integration (frontend ↔ backend) | C | **A/R** | I | C | I |
-| 10 | Backend deploy (Railway) | **A/R** | I | I | I | I |
-| 11 | Frontend deploy (Netlify) | **A** | R | I | I | I |
-| 12 | Functional testing during development | R | R | I | C | R |
-| 13 | QA / Final test checklist | C | C | C | **A/R** | C |
-| 14 | Technical documentation | C | I | C | **A/R** | I |
-| 15 | Economic analysis | C | I | **A/R** | I | I |
-| 16 | GANTT diagram & project phases | I | I | **A/R** | I | I |
-| 17 | RACI matrix | I | I | **A/R** | I | I |
-| 18 | Presentation slides preparation | C | I | C | **A/R** | I |
-| 19 | Final presentation to instructor | C | C | C | **A/R** | I |
+|  #  | Activity                                     | Roman (RO) | Luka (LU) | De Togni (DT) | Matteo (MA) | Shaeek (SH) |
+| :-: | -------------------------------------------- | :--------: | :-------: | :-----------: | :---------: | :---------: |
+|  1  | Project idea definition and requirements     |    **R**   |     A     |       C       |      C      |      C      |
+|  2  | Architectural decisions and technology stack |   **A/R**  |     C     |       I       |      I      |      C      |
+|  3  | Backend development — Laravel API            |   **A/R**  |     I     |       I       |      I      |      I      |
+|  4  | Database management (PostgreSQL / Supabase)  |   **A/R**  |     I     |       I       |      I      |      I      |
+|  5  | ESP32 firmware development                   |      C     |     I     |       I       |      I      |   **A/R**   |
+|  6  | Sensor wiring and hardware assembly          |      C     |     I     |       I       |      I      |   **A/R**   |
+|  7  | Frontend development (React / Vite)          |      I     |  **A/R**  |       C       |      I      |      I      |
+|  8  | UI/UX design                                 |      C     |     C     |    **A/R**    |      I      |      I      |
+|  9  | API integration (frontend ↔ backend)         |      C     |  **A/R**  |       I       |      C      |      I      |
+|  10 | Backend deployment (Railway)                 |   **A/R**  |     I     |       I       |      I      |      I      |
+|  11 | Frontend deployment (Netlify)                |    **A**   |     R     |       I       |      I      |      I      |
+|  12 | Functional testing during development        |      R     |     R     |       I       |      A      |      R      |
+|  13 | QA / Final test checklist                    |      C     |     C     |       C       |   **A/R**   |      C      |
+|  14 | Technical documentation                      |      C     |     C     |       I       |   **A/R**   |      C      |
+|  15 | Cost analysis                                |      C     |     I     |    **A/R**    |      I      |      I      |
+|  16 | Gantt chart and project phases               |      C     |     C     |    **A/R**    |      I      |      I      |
+|  17 | RACI matrix                                  |      C     |     C     |    **A/R**    |      I      |      I      |
+|  18 | Presentation slides preparation              |      C     |     C     |    **A/R**    |      C      |      C      |
+|  19 | Final presentation to the professor          |      C     |     C     |    **A/R**    |      C      |      C      |
 
 ---
 
