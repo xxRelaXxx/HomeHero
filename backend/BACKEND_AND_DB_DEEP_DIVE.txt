@@ -1,0 +1,1370 @@
+================================================================================
+  HH DASHBOARD — BACKEND & DATABASE DEEP DIVE
+  A complete technical reference for the Laravel API and PostgreSQL database.
+================================================================================
+
+This document is divided into two major sections:
+
+  SECTION 1 — Laravel API
+    1.1  What is Laravel?
+    1.2  Why Laravel over plain PHP?
+    1.3  How a request flows through the application
+    1.4  Routing (routes/api.php)
+    1.5  Middleware — what it is and how it is used here
+    1.6  Controllers — logic layer
+    1.7  Models — the data representation layer
+    1.8  Eloquent ORM — explained in depth
+    1.9  Database connection — how Laravel talks to the DB
+    1.10 Sanctum — token-based authentication
+    1.11 Laravel pros and cons
+
+  SECTION 2 — Database (PostgreSQL via Supabase)
+    2.1  What is a relational database?
+    2.2  What is PostgreSQL?
+    2.3  PostgreSQL vs MySQL — differences, pros, cons
+    2.4  Why Supabase was chosen
+    2.5  Migrations — what they are and why they matter
+    2.6  Table-by-table breakdown — why each table and each field exists
+    2.7  The full evolution of the schema (migration timeline)
+
+  SECTION 3 — Entity-Relationship (E/R) Model
+    3.1  Entities and their attributes
+    3.2  Relationships between entities
+    3.3  E/R diagram (ASCII notation)
+
+  SECTION 4 — Logical Schema (Relational Model)
+    4.1  Transformation rules applied
+    4.2  Relational schema for each table
+    4.3  Key and foreign-key summary
+
+  SECTION 5 — Normalization
+    5.1  First Normal Form  (1NF)
+    5.2  Second Normal Form (2NF)
+    5.3  Third Normal Form  (3NF)
+    5.5  Verdict
+
+================================================================================
+  SECTION 1 — LARAVEL API
+================================================================================
+
+--------------------------------------------------------------------------------
+1.1  WHAT IS LARAVEL?
+--------------------------------------------------------------------------------
+
+Laravel is an open-source PHP web framework created by Taylor Otwell in 2011.
+It follows the MVC (Model–View–Controller) architectural pattern and provides
+a clean, expressive syntax on top of raw PHP. It is today the most widely used
+PHP framework in the world.
+
+PHP without a framework means writing raw HTTP handling, SQL strings, manual
+input validation, and hand-rolling security logic in every project — forever
+repeating the same boilerplate. Laravel wraps all of that complexity into a
+structured, testable, and maintainable system.
+
+Core philosophy: "Make the developer happy."
+  - Expressive syntax that reads like English.
+  - Convention over configuration: sensible defaults mean less setup.
+  - A rich ecosystem: Sanctum (auth), Eloquent (ORM), Artisan (CLI), etc.
+
+--------------------------------------------------------------------------------
+1.2  WHY LARAVEL OVER PLAIN PHP?
+--------------------------------------------------------------------------------
+
+Let's compare the same operation in both approaches.
+
+PLAIN PHP — saving a telemetry reading:
+  <?php
+  $conn = pg_connect("host=... dbname=... user=... password=...");
+  $device = pg_escape_string($conn, $_POST['device_name']);
+  $temp   = floatval($_POST['temperature']);
+  if (!is_numeric($_POST['temperature'])) {
+      http_response_code(422);
+      echo json_encode(['error' => 'invalid temperature']);
+      exit;
+  }
+  $result = pg_query_params($conn,
+      "INSERT INTO telemetries (device_name, temperature, ...) VALUES ($1, $2, ...)",
+      [$device, $temp, ...]
+  );
+  $id = pg_fetch_assoc(pg_query("SELECT lastval()"))['lastval'];
+  echo json_encode(['id' => $id]);
+
+LARAVEL — the same operation:
+  public function store(Request $request) {
+      $request->validate(['device_name' => 'required|string', 'temperature' => 'required|numeric']);
+      $data = Telemetry::create($request->only(['device_name', 'temperature', ...]));
+      return response()->json(['telemetry' => $data], 201);
+  }
+
+With Laravel you get:
+  - Automatic input validation with readable rules.
+  - SQL injection protection built into every query via PDO bindings.
+  - Automatic JSON serialization of model objects.
+  - Proper HTTP status codes and headers handled for you.
+  - No manual DB connection management.
+  - CSRF protection, rate limiting, CORS — all configurable with one line.
+
+Other reasons Laravel was chosen over plain PHP for this project:
+
+  a) Sanctum: Out-of-the-box token authentication for SPAs and APIs.
+     Managing tokens manually in plain PHP would require writing a full
+     token generation, storage, hashing, and revocation system from scratch.
+
+  b) Eloquent ORM: Write PHP instead of SQL. Relationships, casting,
+     timestamps — all automatic.
+
+  c) Migrations: The database schema is version-controlled code.
+     Plain PHP has no built-in equivalent.
+
+  d) Artisan CLI: Commands like `php artisan migrate`, `make:model`,
+     `make:controller` eliminate boilerplate completely.
+
+  e) Deployment simplicity: Laravel works on any PHP host, any Docker
+     container, and Railway.app with zero extra configuration.
+
+  f) Security defaults: Passwords hashed with bcrypt (12 rounds configured
+     in this project's .env). SQL injection impossible via Eloquent.
+     Headers (CORS, etc.) handled by middleware.
+
+--------------------------------------------------------------------------------
+1.3  HOW A REQUEST FLOWS THROUGH THE APPLICATION
+--------------------------------------------------------------------------------
+
+Every HTTP request to https://hhero.up.railway.app/api/... goes through
+the following pipeline, in order:
+
+  1. Web server (Nginx inside Docker on Railway) receives the HTTP request.
+  2. PHP-FPM processes it, entering at public/index.php.
+  3. Laravel bootstraps the application (bootstrap/app.php).
+  4. The HTTP Kernel runs all registered global middleware (e.g., CORS headers).
+  5. The Router matches the URL to a route definition in routes/api.php.
+  6. Route-specific middleware runs (e.g., auth:sanctum checks the token).
+  7. If the middleware passes, the Controller method is called.
+  8. The Controller uses Models / Eloquent to read or write the database.
+  9. The Controller returns a Response (JSON in this project).
+ 10. The response passes back through middleware (if any), then to the client.
+
+If any step fails (validation error, bad token, DB error), Laravel
+automatically generates the appropriate JSON error response and stops the
+pipeline at that point.
+
+--------------------------------------------------------------------------------
+1.4  ROUTING — routes/api.php
+--------------------------------------------------------------------------------
+
+The file routes/api.php is the single source of truth for every URL the
+API accepts. It maps HTTP method + URL pattern to a controller method.
+
+All routes in api.php are automatically prefixed with /api by Laravel.
+So `Route::post('/login', ...)` becomes `POST /api/login`.
+
+The routes in this project, grouped by protection:
+
+  PUBLIC (no token required):
+    GET  /                        Health check — returns {"status":"ok"}
+    POST /register                Creates a new user account
+    POST /login                   Returns a Bearer token
+    POST /device/data             ESP32 telemetry write
+
+  PROTECTED by auth:sanctum middleware:
+    POST /logout                  Revokes the current token in DB
+    GET  /user                    Returns the authenticated user's profile
+    PUT  /user/profile            Updates name / email
+    GET  /telemetry               Returns last 20 sensor readings
+    GET  /device/{device}/settings  Returns fan config for a device
+    PUT  /device/{device}/fan       Updates fan mode / threshold
+
+The `{device}` segment is a route parameter — Laravel extracts it from the
+URL and passes it as a $device string argument to the controller method.
+
+--------------------------------------------------------------------------------
+1.5  MIDDLEWARE — WHAT IT IS AND HOW IT IS USED HERE
+--------------------------------------------------------------------------------
+
+Middleware is a layer of code that wraps around a request before it reaches
+the controller. Think of it as a chain of security checkpoints or
+transformations a request must pass through.
+
+A middleware can:
+  - Inspect the request and reject it (return an error response early).
+  - Modify the request (add data, transform headers).
+  - Let the request through unchanged.
+  - Do something AFTER the response is generated (logging, etc.).
+
+Middleware used in this project:
+
+  auth:sanctum
+  ------------
+  This is the most important one. When placed on a route group, it:
+    1. Reads the "Authorization: Bearer <token>" header from the request.
+    2. Hashes the token with SHA-256.
+    3. Looks up that hash in the `personal_access_tokens` table.
+    4. Checks that the token has not expired (expires_at IS NULL or in future).
+    5. If found and valid: sets the authenticated user on the request object,
+       allowing $request->user() to work in controllers.
+    6. If not found or expired: immediately returns HTTP 401 Unauthorized.
+       The React frontend's Axios interceptor catches this 401 and clears
+       localStorage, redirecting the user to the login page.
+
+  CORS Middleware (HandleCors — built-in Laravel)
+  -----------------------------------------------
+  The React frontend runs on https://hhero.netlify.app while the API runs on
+  https://hhero.up.railway.app. These are different origins. Browsers block
+  cross-origin requests by default (CORS policy). This middleware adds the
+  correct "Access-Control-Allow-Origin" headers to every response, telling
+  the browser the cross-origin request is permitted.
+
+--------------------------------------------------------------------------------
+1.6  CONTROLLERS — THE LOGIC LAYER
+--------------------------------------------------------------------------------
+
+Controllers are PHP classes that contain the actual business logic for each
+API endpoint. They sit between Routes (which call them) and Models (which
+they call). Each public method on a controller corresponds to one route.
+
+Controllers in this project:
+
+  AuthController.php
+    register()     — validates input, creates User, generates Sanctum token
+    login()        — verifies credentials with Hash::check(), generates token
+    logout()       — calls $request->user()->currentAccessToken()->delete()
+
+  TelemetryController.php
+    index()        — returns last 20 Telemetry rows ordered by created_at desc
+    store()        — validates+saves a new Telemetry row, reads DeviceSettings,
+                     computes fan_desired_state, returns both in response
+
+  DeviceController.php
+    getSettings()  — firstOrCreate a DeviceSettings row for the given device
+    setFan()       — validates + updateOrCreate DeviceSettings for the device
+
+  UserController.php
+    profile()      — returns the authenticated user's data
+    updateProfile() — validates + updates name/email on the user record
+
+Controllers never write SQL. They only speak to Eloquent Models.
+Controllers never return HTML. They always return response()->json().
+
+--------------------------------------------------------------------------------
+1.7  MODELS — THE DATA REPRESENTATION LAYER
+--------------------------------------------------------------------------------
+
+A Model is a PHP class that represents one database table. Each instance of
+a Model represents one row in that table. Models define:
+  - Which table they belong to (by convention: class Telemetry → table telemetries)
+  - Which columns can be mass-assigned ($fillable)
+  - How certain column values should be automatically cast ($casts)
+  - Relationships to other tables (not used in this project yet)
+
+Models in this project:
+
+  User (built-in Laravel model, extended)
+    table: users
+    fillable: name, username, email, password, avatar, google_id
+    casts: email_verified_at → datetime, password → hashed (auto-bcrypt)
+
+  Telemetry
+    table: telemetries
+    fillable: device_name, temperature, humidity, air_pressure,
+              gas_kohm, light_lux, noise_db, fan_state, created_at
+    casts: fan_state → boolean
+    Note: created_at is in $fillable so the ESP32 could theoretically
+          provide its own timestamp. Laravel still auto-sets it on create.
+
+  DeviceSettings
+    table: device_settings
+    fillable: device_name, fan_mode, fan_manual_state, fan_auto_temp_threshold
+    Note: used with firstOrCreate() and updateOrCreate() — Eloquent methods
+          that find-or-create / update-or-create records atomically.
+
+The HasFactory trait on Telemetry enables test data generation via factories.
+
+--------------------------------------------------------------------------------
+1.8  ELOQUENT ORM — EXPLAINED IN DEPTH
+--------------------------------------------------------------------------------
+
+ORM stands for Object-Relational Mapper. It is a technique that lets you
+interact with a database using objects and methods in your programming language
+instead of writing raw SQL strings.
+
+Eloquent is Laravel's ORM implementation. Every Eloquent model extends
+Illuminate\Database\Eloquent\Model and automatically gains the ability to
+read and write the corresponding database table.
+
+WITHOUT Eloquent (raw SQL):
+  $rows = DB::select("SELECT * FROM telemetries ORDER BY created_at DESC LIMIT 20");
+
+WITH Eloquent:
+  $rows = Telemetry::orderBy('created_at', 'desc')->take(20)->get();
+
+The Eloquent version is:
+  - Safer (no SQL injection possible — all values are PDO-bound automatically)
+  - Readable (reads like English)
+  - Returns PHP objects (Model instances) not raw arrays, so you get methods
+    and type casting automatically
+  - Database-agnostic (the exact same code works on PostgreSQL, MySQL, SQLite)
+
+Key Eloquent methods used in this project:
+
+  Telemetry::create($data)
+    Inserts a new row. Only columns listed in $fillable are accepted.
+    Protects against mass-assignment vulnerabilities automatically.
+    Returns the created model instance with its new id and timestamps set.
+
+  Telemetry::orderBy('created_at', 'desc')->take(20)->get()->reverse()->values()
+    Builds a query: SELECT * FROM telemetries ORDER BY created_at DESC LIMIT 20
+    ->get() executes it, returning a Collection (like a smart array).
+    ->reverse() reverses order to chronological (oldest first for chart X axis).
+    ->values() re-indexes the array keys to 0,1,2,... for clean JSON output.
+
+  DeviceSettings::firstOrCreate(['device_name' => $name], $defaults)
+    Tries to find a row WHERE device_name = $name.
+    If not found, creates it with the $defaults array.
+    Atomic — no race condition. Critical for a new device's first POST.
+
+  DeviceSettings::updateOrCreate(['device_name' => $name], $data)
+    Like firstOrCreate but also updates the row with $data if found.
+    Used in setFan() so the dashboard can change settings at any time.
+
+  $user->currentAccessToken()->delete()
+    On the User model (extended by Laravel Sanctum's HasApiTokens trait),
+    retreives the token that was used for THIS request and deletes it from
+    personal_access_tokens — this is how logout works.
+
+Eloquent's $casts property:
+  'fan_state' => 'boolean' means that when Eloquent reads fan_state from
+  the database (which stores it as 0/1 in PostgreSQL's boolean column),
+  it automatically converts it to PHP's true/false before putting it in
+  the model. When serialized to JSON, it becomes JSON true/false, not 0/1.
+  This is what allows the React frontend to directly use fan_state as a
+  JavaScript boolean without any conversion.
+
+--------------------------------------------------------------------------------
+1.9  DATABASE CONNECTION — HOW LARAVEL TALKS TO SUPABASE/POSTGRES
+--------------------------------------------------------------------------------
+
+Laravel's database configuration lives in config/database.php. It reads
+from environment variables (.env file on local, Railway environment variables
+on production).
+
+The relevant .env variables for this project:
+
+  DB_CONNECTION=pgsql
+    Tells Laravel to use the PostgreSQL driver (via PDO extension pdo_pgsql).
+
+  DB_HOST=aws-1-eu-central-1.pooler.supabase.com
+    Supabase's connection pooler hostname (PgBouncer, in session mode).
+    Using a pooler is important for serverless/cloud deployments because
+    PostgreSQL has a fixed maximum number of connections. The pooler
+    manages connection reuse so Railway's PHP processes don't exhaust the
+    Postgres connection limit.
+
+  DB_PORT=5432
+    Standard PostgreSQL port.
+
+  DB_DATABASE=postgres
+    The default Supabase database name.
+
+  DB_USERNAME=postgres.fyawxiojhqmutobveoak
+    Supabase project-scoped username format.
+
+  DB_PASSWORD=...
+    Set in Railway's secret environment variables (never committed to git).
+
+  DATABASE_URL=postgresql://...
+    Full connection string alternative, used by some deployment platforms.
+
+When Laravel boots, it creates a PDO (PHP Data Objects) connection to
+PostgreSQL using these credentials. PDO is PHP's built-in database
+abstraction layer — Eloquent sits on top of it.
+
+All SQL generated by Eloquent uses PDO prepared statements with parameter
+binding. This means user-provided values are NEVER interpolated directly into
+SQL strings, making SQL injection attacks impossible by design.
+
+--------------------------------------------------------------------------------
+1.10 SANCTUM — TOKEN-BASED AUTHENTICATION
+--------------------------------------------------------------------------------
+
+Laravel Sanctum is a lightweight authentication system for SPAs and APIs.
+It was chosen over Laravel Passport (OAuth2) because this project does not
+need OAuth scopes, client credentials, or refresh tokens — a simple Bearer
+token per user session is sufficient.
+
+How it works in this project:
+
+  1. User calls POST /api/login with email + password.
+  2. AuthController verifies password with Hash::check() (bcrypt comparison).
+  3. $user->createToken('myapptoken')->plainTextToken generates a random token,
+     stores a SHA-256 hash of it in personal_access_tokens, and returns
+     the plain-text version ONCE (never stored in plain text, only in transit).
+  4. React stores this plain-text token in localStorage.
+  5. On every subsequent request, React sends: Authorization: Bearer <token>
+  6. auth:sanctum middleware hashes the incoming token with SHA-256,
+     looks it up in personal_access_tokens, validates expiry, sets auth user.
+  7. On logout, the token ROW is deleted from personal_access_tokens.
+     Even if someone stole the token from localStorage, it now points to
+     nothing in the database — the token is dead.
+
+The personal_access_tokens table stores:
+  - tokenable_type and tokenable_id: polymorphic relation (in this project
+    always App\Models\User and the user's id).
+  - name: a label ('myapptoken') — useful if you want multiple tokens per user.
+  - token: the SHA-256 hash of the plain-text token (64 hex characters).
+  - abilities: JSON array of permissions (unused in this project, ["*"]).
+  - last_used_at: timestamp updated on every authenticated request.
+  - expires_at: NULL in this project (tokens never expire automatically).
+
+--------------------------------------------------------------------------------
+1.11 LARAVEL PROS AND CONS
+--------------------------------------------------------------------------------
+
+PROS:
+  + Massive ecosystem and community — answers to every problem exist.
+  + Built-in security: bcrypt, PDO binding, CSRF, rate limiting, CORS.
+  + Eloquent ORM makes DB code readable, safe, and database-agnostic.
+  + Migrations make the DB schema version-controlled and reproducible.
+  + Sanctum/Passport handle authentication properly out of the box.
+  + Artisan CLI eliminates boilerplate (generate models, controllers, etc.).
+  + Clear MVC separation makes the codebase easy to maintain and extend.
+  + Ships with a testing framework (PHPUnit) and factories for test data.
+  + Excellent Docker and cloud deployment support.
+
+CONS:
+  - Heavier than micro-frameworks (Slim, Lumen) — more memory per request.
+  - The learning curve: understanding Service Providers, Facades, IoC
+    container takes time for newcomers.
+  - "Magic" can be confusing: $this->hasMany() generating SQL behind the scenes
+    is elegant until something goes wrong and you need to debug the generated SQL.
+  - PHP performance: Node.js (Express) or Go are faster for high-concurrency
+    scenarios. Laravel handles this project's load easily, but for 100k
+    requests/second it would need optimization (Octane, caching, etc.).
+  - Opinionated: to work "with the framework" you must learn its conventions.
+    Fighting the framework leads to messy code.
+
+================================================================================
+  SECTION 2 — DATABASE (PostgreSQL via Supabase)
+================================================================================
+
+--------------------------------------------------------------------------------
+2.1  WHAT IS A RELATIONAL DATABASE?
+--------------------------------------------------------------------------------
+
+A relational database organizes data into tables (relations). Each table has:
+  - Rows (records): one entry per entity (one sensor reading, one user, etc.).
+  - Columns (fields): one attribute per entity (temperature, created_at, etc.).
+  - A primary key: a unique identifier for each row (typically an auto-
+    incrementing integer called `id`).
+  - Foreign keys: columns that point to rows in other tables, creating
+    explicit relationships.
+
+SQL (Structured Query Language) is the standard language used to query
+and manipulate relational data: SELECT, INSERT, UPDATE, DELETE, JOIN, etc.
+
+This project uses two related concepts from the relational model:
+  - device_name as a logical foreign key between telemetries and device_settings
+    (no enforced DB-level FK constraint, but the relationship is implicit).
+  - Personal access tokens reference users via tokenable_id + tokenable_type
+    (a polymorphic relationship managed by Sanctum).
+
+--------------------------------------------------------------------------------
+2.2  WHAT IS POSTGRESQL?
+--------------------------------------------------------------------------------
+
+PostgreSQL (often called Postgres) is an open-source, object-relational
+database management system (ORDBMS) first released in 1996. It is managed
+by the PostgreSQL Global Development Group, a non-profit volunteer community.
+
+Key characteristics:
+  - ACID compliant: every transaction is Atomic, Consistent, Isolated, Durable.
+    No partial writes, no data corruption, even during a server crash.
+  - Standards compliant: follows the SQL standard more strictly than MySQL.
+  - Extensible: you can add custom data types, functions, and operators.
+  - Supports advanced data types: JSON/JSONB, arrays, ranges, geometric types,
+    full-text search, UUID — natively.
+  - Row-Level Security (RLS): fine-grained access control at the row level
+    (used by Supabase's dashboard-level permissions).
+  - MVCC (Multi-Version Concurrency Control): reads never block writes and
+    vice versa, giving excellent concurrency performance.
+  - Runs on Linux, macOS, Windows, Docker, all major cloud providers.
+
+--------------------------------------------------------------------------------
+2.3  POSTGRESQL vs MYSQL — DIFFERENCES, PROS, CONS
+--------------------------------------------------------------------------------
+
+Both PostgreSQL and MySQL are the two most widely used open-source relational
+databases. Here is a detailed comparison relevant to this project.
+
+ARCHITECTURE
+  PostgreSQL: Process-based model (one OS process per connection).
+  MySQL:      Thread-based model (one thread per connection, lighter startup).
+  Impact:     MySQL has slightly lower memory per connection. PostgreSQL
+              compensates by having much better connection pooling support
+              (PgBouncer, used by Supabase here).
+
+DATA TYPE RICHNESS
+  PostgreSQL: Native JSONB (binary JSON with indexing), arrays, ranges, hstore,
+              geometric types, custom enum types, UUID natively, full-text search.
+  MySQL:      Has JSON support but without the depth of JSONB indexing.
+              Arrays are not a native type. Enums are supported but limited.
+  Impact:     For this project, PostgreSQL's ENUM type was used for fan_mode
+              ('auto'|'manual'). This is enforced at DB level — inserting any
+              other value raises a DB error before it ever reaches validation.
+
+SQL STANDARDS COMPLIANCE
+  PostgreSQL: Extremely standards-compliant. Supports window functions,
+              CTEs (WITH queries), full OUTER JOINs, UPSERT (INSERT ... ON CONFLICT).
+  MySQL:      Historically lagged on standards (improved in MySQL 8), some
+              quirks with GROUP BY and ONLY_FULL_GROUP_BY mode.
+
+BOOLEAN TYPE
+  PostgreSQL: Native boolean type. Stores true/false directly.
+  MySQL:      No native boolean. Uses TINYINT(1) under the hood (0 or 1).
+              Eloquent's boolean cast is needed in both cases, but Postgres
+              is semantically cleaner.
+
+TRANSACTIONS / CONCURRENCY
+  PostgreSQL: Excellent MVCC implementation. DDL statements (ALTER TABLE,
+              CREATE INDEX) are transactional — you can roll back a migration.
+  MySQL (InnoDB): Good MVCC but DDL is NOT transactional. A failed migration
+              can leave the schema in a partial state.
+  Impact:     CRITICAL for this project. Laravel migrations run in transactions
+              on PostgreSQL. If a migration fails halfway, nothing is committed.
+              On MySQL, a partial migration could corrupt the schema.
+
+FULL-TEXT SEARCH
+  PostgreSQL: Native full-text search with tsvector/tsquery, configurable
+              per language.
+  MySQL:      Has FULLTEXT indexes on InnoDB but less flexible.
+  Impact:     Not used in this project, but available for future features.
+
+POSTGRESQL PROS:
+  + More correct SQL standard compliance.
+  + Native boolean, UUID, JSONB, array, range types.
+  + Better data integrity enforcement (transactional DDL, stricter type checking).
+  + Excellent for complex queries (window functions, CTEs, lateral joins).
+  + Supabase is built on it — direct integration with dashboard UI, realtime, etc.
+  + Row-Level Security for fine-grained multi-tenant access control.
+  + MVCC concurrency is extremely robust.
+
+POSTGRESQL CONS:
+  - Slightly higher memory usage per connection (mitigated by PgBouncer/pooler).
+  - Historically slightly less web hosting support than MySQL (now largely resolved).
+  - More configuration needed for optimal performance on large datasets
+    (autovacuum tuning, work_mem, etc.).
+  - MySQL is still the default in many shared hosting control panels (cPanel).
+
+MYSQL PROS:
+  + Simpler setup and lower footprint for tiny applications.
+  + More common in traditional shared web hosting.
+  + Slightly faster for simple read-heavy workloads with InnoDB.
+  + MariaDB (MySQL fork) adds some features.
+
+MYSQL CONS:
+  - Non-transactional DDL means migration failures can corrupt schema.
+  - Less strict type system (silent numeric truncation, quirky GROUP BY).
+  - No native boolean type, no JSONB indexing, no array type.
+  - Not used by Supabase, so would require a separate DB host for this project.
+
+VERDICT FOR THIS PROJECT:
+  PostgreSQL via Supabase was the right choice:
+    - Supabase provides a fully managed, free-tier PostgreSQL instance
+      with a visual table editor, realtime subscriptions, and RLS.
+    - The boolean and enum types are used directly (fan_state, fan_mode).
+    - Transactional DDL protects the migration history.
+    - Supabase's connection pooler (PgBouncer) makes it production-ready
+      for Railway deployments where the PHP process count can spike.
+
+--------------------------------------------------------------------------------
+2.4  WHY SUPABASE WAS CHOSEN
+--------------------------------------------------------------------------------
+
+Supabase is a Firebase alternative built on top of PostgreSQL. It provides:
+  - A fully managed PostgreSQL database (free tier: 500 MB, 2 shared CPU).
+  - A web UI (Table Editor, SQL Editor, logs) — used during development to
+    visually inspect and manually edit data without writing SQL.
+  - PgBouncer-based connection pooler at aws-1-eu-central-1.pooler.supabase.com
+    — critical for Railway deployments where PHP-FPM spawns multiple workers.
+  - Automatic SSL on all connections.
+  - Row-Level Security (RLS) — visible in the screenshots as "RLS disabled",
+    meaning for now all rows are accessible to anyone with the DB credentials.
+    This is fine because the API (Laravel) enforces authentication, and the
+    Supabase DB is not exposed to the public internet directly.
+
+Alternatives considered:
+  - Railway's own MySQL/PostgreSQL: would work, but no free-tier table UI.
+  - PlanetScale (MySQL): free tier, but MySQL and serverless-only limitations.
+  - Fly.io Postgres: more DevOps work to manage.
+  - Local SQLite: used for local dev (see database.sqlite in this repo) but
+    cannot be used in production on a stateless Railway deployment.
+
+--------------------------------------------------------------------------------
+2.5  MIGRATIONS — WHAT THEY ARE AND WHY THEY MATTER
+--------------------------------------------------------------------------------
+
+A migration is a PHP file that describes a change to the database schema
+using code instead of raw SQL. Each migration has two methods:
+  - up():   apply the change (create table, add column, etc.)
+  - down(): reverse the change (drop table, remove column, etc.)
+
+Migrations are version-controlled in git. This means:
+  - Every developer (or deployment) can recreate the exact same schema by
+    running `php artisan migrate` from scratch.
+  - Schema changes are tracked in git history alongside the code that uses them.
+  - Rolling back a bad change is `php artisan migrate:rollback` — it calls
+    the down() methods in reverse order.
+  - The `migrations` table in the database records which files have been run,
+    so `php artisan migrate` only runs new migrations, never reruns old ones.
+
+Without migrations, you would have to manually run SQL scripts on every
+deployment, keep track of which scripts have been run on which environment,
+and hope that your production DB matches your development DB.
+
+In this project, `php artisan migrate` was run on the Supabase PostgreSQL
+database (pointed to by DATABASE_URL) to create all tables in production.
+
+--------------------------------------------------------------------------------
+2.6  TABLE-BY-TABLE BREAKDOWN — WHY EACH TABLE AND EACH FIELD EXISTS
+--------------------------------------------------------------------------------
+
+TABLE: users
+Created by: 0001_01_01_000000_create_users_table.php
+            2026_01_26_000000_add_profile_fields_to_users_table.php
+            2026_01_26_230938_add_google_id_to_users_table.php
+
+Purpose:
+  Stores dashboard user accounts. Only humans who log into the React
+  dashboard have rows here. The ESP32 device never authenticates as a user.
+
+Fields:
+  id             — Auto-incrementing primary key. Laravel convention.
+  name           — Display name shown in the Account page.
+  username       — Optional unique handle (nullable, reserved for future use).
+  email          — Login credential. Unique constraint enforced at DB level.
+  email_verified_at — Nullable timestamp. Not used in this project (no email
+                    verification flow), but included for future extension.
+  password       — bcrypt hash (12 rounds). NEVER stored plain text.
+                    Laravel's 'hashed' cast auto-hashes on assignment.
+  avatar         — Nullable URL string for a profile picture (Google OAuth
+                    sets this automatically, reserved for future use).
+  google_id      — Nullable string for Google OAuth user ID.
+                    Added when Google login was being prototyped (commented
+                    out in AuthController but the column exists for re-enabling).
+  remember_token — 100-char string used by Laravel's "remember me" cookie auth.
+                    Not directly used in this API-token setup, but included
+                    as it is part of the Authenticatable contract.
+  created_at     — Auto-set by Eloquent timestamps() on insert.
+  updated_at     — Auto-updated by Eloquent on every save.
+
+Why these fields and not others:
+  The minimum viable user record for a JWT/Sanctum API needs: id, email,
+  password. The rest (name, username, avatar, google_id) were added
+  incrementally as features were planned or prototyped, using separate
+  migrations rather than adding to the initial migration — this is the
+  correct approach because the initial migration was already run in production.
+
+--------------------------------------------------------------------------------
+
+TABLE: password_reset_tokens
+Created by: 0001_01_01_000000_create_users_table.php
+
+Purpose:
+  Stores temporary tokens for password reset emails (the "Forgot Password"
+  flow). Not yet implemented in this project's API but the table exists
+  because Laravel's User model and Authenticatable contract expect it.
+
+Fields:
+  email      — Primary key and lookup field. One reset token per email.
+  token      — The hashed reset token sent in the email link.
+  created_at — Expiry is calculated from this (typically 60 minutes).
+
+--------------------------------------------------------------------------------
+
+TABLE: sessions
+Created by: 0001_01_01_000000_create_users_table.php
+
+Purpose:
+  Stores server-side session data when SESSION_DRIVER=database.
+  In this project, sessions are used by Laravel internally (e.g., for CSRF
+  token management in web routes). The API itself is stateless (Bearer token),
+  but Laravel still boots its session mechanism for certain internal features.
+
+Fields:
+  id            — Session identifier string (sent as a cookie).
+  user_id       — Nullable FK to users. Null for guest sessions.
+  ip_address    — For session binding / security auditing.
+  user_agent    — Browser/client identification.
+  payload       — Encrypted serialized session data (longText).
+  last_activity — Unix timestamp for session expiry cleanup.
+
+--------------------------------------------------------------------------------
+
+TABLE: cache / cache_locks
+Created by: 0001_01_01_000001_create_cache_table.php
+
+Purpose:
+  Laravel's cache system stores temporary key-value data here when
+  CACHE_DRIVER=database. Used internally for rate limiting, etc.
+  Not directly used by application code in this project but present
+  because it is part of Laravel's default scaffold.
+
+--------------------------------------------------------------------------------
+
+TABLE: jobs / job_batches / failed_jobs
+Created by: 0001_01_01_000002_create_jobs_table.php
+
+Purpose:
+  Laravel's queue system. Background jobs (e.g., send an email, process
+  an image) are serialized and stored here when QUEUE_DRIVER=database.
+  Not used in this project's current feature set but present in the
+  default Laravel scaffold for future use.
+
+--------------------------------------------------------------------------------
+
+TABLE: personal_access_tokens
+Created by: 2025_11_26_190929_create_personal_access_tokens_table.php
+
+Purpose:
+  The backbone of Sanctum authentication. Every login generates a new row.
+  Every authenticated API request is validated against this table.
+  Every logout deletes the relevant row.
+
+Fields:
+  id              — Auto-incrementing PK.
+  tokenable_type  — The model class that owns this token.
+                    In this project always "App\Models\User".
+  tokenable_id    — The id of the owning model (the user's id).
+                    Together with tokenable_type this is a polymorphic
+                    relation — designed to support tokens for non-user
+                    models too (e.g., an ESP32 device model in the future).
+  name            — Human label for the token ('myapptoken' in this project).
+  token           — SHA-256 hash of the actual token string (64 hex chars).
+                    The real token is only returned once, on creation.
+  abilities       — JSON array of permissions. ["*"] means full access.
+  last_used_at    — Timestamp updated on every authenticated request.
+                    Useful for detecting stale/abandoned sessions.
+  expires_at      — NULL in this project (tokens don't auto-expire).
+                    Could be set to NOW() + 7 days for stricter security.
+  created_at      — When the token was issued (= when the user logged in).
+  updated_at      — Auto-updated by Eloquent.
+
+--------------------------------------------------------------------------------
+
+TABLE: telemetries
+Created by: 2025_11_26_191105_create_telemetries_table.php
+Updated by: 2026_02_22_000000_add_new_sensors_to_telemetries_table.php
+
+Purpose:
+  The core data table. Every sensor reading from every ESP32 device (or
+  simulator) is an immutable append-only row here. It is an event log,
+  never updated, only inserted and read.
+
+Design decision — append-only:
+  Environmental sensor data is time-series in nature. You never "correct"
+  a past reading — you just add a new one. This makes the table an audit
+  log of physical reality. The dashboard charts simply read the last N rows.
+
+Fields:
+  id           — Auto-incrementing PK. Also serves as a simple sort key.
+  device_name  — String identifier of the physical device (e.g.,
+                 "esp32_living_room"). Not a foreign key to any table —
+                 chosen as a plain string because ESP32 devices are not
+                 "users" and don't need an account. It also matches the
+                 device_settings.device_name lookup key exactly.
+  temperature  — float (°C). Core BME280/BME680 sensor reading.
+  humidity     — float (%). Core BME280/BME680 sensor reading.
+  air_pressure — float (hPa). Core BMP280/BME680 sensor reading.
+  gas_kohm     — float (kΩ). NULLABLE. BME680 gas resistance.
+                 Higher value = cleaner air. Added Feb 2026 — nullable so
+                 existing rows (and older firmware without this sensor) are
+                 not broken. The frontend handles null gracefully.
+  light_lux    — float (lux). NULLABLE. Ambient light sensor (LDR or BH1750).
+                 Added Feb 2026, same nullable reasoning.
+  noise_db     — float (dB). NULLABLE. Microphone sound level sensor.
+                 Added Feb 2026, same nullable reasoning.
+  fan_state    — boolean. DEFAULT false. The ACTUAL state of the fan relay
+                 at the moment this reading was taken. Distinct from
+                 fan_desired_state (which is computed and returned in the
+                 HTTP response, never stored here). This records history:
+                 "the fan WAS on/off when this reading was taken."
+  created_at   — Auto-set timestamp. Used as the X-axis on all charts.
+  updated_at   — Auto-set, never changes (rows are never updated).
+
+Why nullable for the new sensor columns:
+  Adding NOT NULL columns with no DEFAULT to an existing table would fail
+  immediately — existing rows have no value for those columns.
+  Making them nullable is the only safe, non-destructive migration strategy.
+
+--------------------------------------------------------------------------------
+
+TABLE: device_settings
+Created by: 2026_02_22_000001_create_device_settings_table.php
+
+Purpose:
+  Acts as the "mailbox" between the dashboard (user intent) and the ESP32
+  (device behavior). The dashboard writes desired fan configuration here.
+  The ESP32 reads it indirectly — every time it POSTs telemetry data,
+  TelemetryController reads this table and returns the computed
+  fan_desired_state in the response. The ESP32 then acts on that.
+
+  This is a PULL model: the device never opens a persistent connection.
+  It periodically pushes data and receives instructions in the response.
+  One row per device. Created automatically on first contact via firstOrCreate().
+
+Fields:
+  id                      — Auto-incrementing PK.
+  device_name             — UNIQUE string. The same identifier used in
+                            telemetries.device_name. The UNIQUE constraint
+                            ensures there is exactly one settings row per device.
+  fan_mode                — ENUM('auto', 'manual'). Enforced at DB level.
+                            'auto':   backend decides based on temperature.
+                            'manual': dashboard has direct override control.
+                            DEFAULT 'auto' — safest default, fan responds
+                            to temperature without any manual intervention needed.
+  fan_manual_state        — boolean. DEFAULT false.
+                            Only meaningful when fan_mode = 'manual'.
+                            The explicit on/off command from the dashboard.
+  fan_auto_temp_threshold — float. DEFAULT 30.0 (°C).
+                            Only meaningful when fan_mode = 'auto'.
+                            The temperature above which the fan turns on.
+                            30°C chosen as a reasonable "room is hot" default.
+  created_at              — When the device was first seen by the system.
+  updated_at              — Last time a dashboard user changed the settings.
+
+--------------------------------------------------------------------------------
+2.7  THE FULL EVOLUTION OF THE SCHEMA (MIGRATION TIMELINE)
+--------------------------------------------------------------------------------
+
+The schema was built incrementally. Here is the full timeline showing
+what existed at each point and the reason for each change.
+
+  2025-11-26  Initial project setup
+              - users (id, name, email, password, timestamps)
+              - password_reset_tokens
+              - sessions
+              - cache, cache_locks
+              - jobs, job_batches, failed_jobs
+              - personal_access_tokens  (Sanctum installed)
+              - telemetries (id, device_name, temperature, humidity,
+                air_pressure, timestamps)
+
+              State: Basic API. ESP32 can POST 3 sensors. Dashboard can
+              register, login, and view temperature/humidity/pressure charts.
+
+  2026-01-26  User profile expansion
+              - users table: + username (nullable, unique)
+              - users table: + avatar   (nullable)
+              - users table: + google_id (nullable)
+
+              Reason: Google OAuth login was being prototyped. The columns
+              were added to existing users table without breaking any data.
+
+  2026-02-22  ESP32 hardware expansion + fan control
+              - telemetries table: + gas_kohm  (nullable float)
+              - telemetries table: + light_lux  (nullable float)
+              - telemetries table: + noise_db   (nullable float)
+              - telemetries table: + fan_state  (boolean, default false)
+              - device_settings table created   (full table, new feature)
+
+              Reason: The ESP32 was upgraded with additional sensors
+              (BME680 for gas, light sensor, microphone). A physical cooler
+              fan was added as an actuator. The device_settings table was
+              designed as a decoupled command layer so the dashboard UI can
+              control the fan without needing a persistent connection to the device.
+
+  FINAL SCHEMA STATE (as of Feb 2026):
+              users                    — dashboard user accounts
+              password_reset_tokens    — unused, standard Laravel scaffold
+              sessions                 — Laravel internal session storage
+              cache / cache_locks      — Laravel internal cache
+              jobs / job_batches       — Laravel queue (unused, scaffold)
+              failed_jobs              — Laravel queue error log (unused)
+              personal_access_tokens   — Sanctum Bearer tokens
+              telemetries              — all sensor readings (append-only)
+              device_settings          — per-device fan configuration
+
+================================================================================
+  SECTION 3 — ENTITY-RELATIONSHIP (E/R) MODEL
+================================================================================
+
+The E/R model is a conceptual representation of the data and its structure,
+independent of any specific database technology. It describes WHAT exists
+(entities), WHAT properties each thing has (attributes), and HOW things
+are connected (relationships).
+
+Only the four application-level tables are modelled here. The infrastructure
+tables (sessions, cache, jobs, password_reset_tokens, failed_jobs) are Laravel
+scaffold tables with no application-level relationships and are omitted.
+
+--------------------------------------------------------------------------------
+3.1  ENTITIES AND THEIR ATTRIBUTES
+--------------------------------------------------------------------------------
+
+Convention used below:
+  PK  = Primary Key          UQ  = Unique constraint
+  NN  = Not Null             N   = Nullable
+  FK  = Foreign Key (logical, no DB-enforced constraint unless stated)
+
+  Entity: USER
+  +-----------------------+------+-----+-------+
+  | Attribute             | Type | NN  | Notes |
+  +-----------------------+------+-----+-------+
+  | id                    | int  | PK  |       |
+  | name                  | str  | NN  |       |
+  | username              | str  | N   | UQ    |
+  | email                 | str  | NN  | UQ    |
+  | email_verified_at     | ts   | N   |       |
+  | password              | str  | NN  | hashed|
+  | avatar                | str  | N   | URL   |
+  | google_id             | str  | N   |       |
+  | remember_token        | str  | N   |       |
+  | created_at            | ts   | NN  | auto  |
+  | updated_at            | ts   | NN  | auto  |
+  +-----------------------+------+-----+-------+
+
+  Entity: PERSONAL_ACCESS_TOKEN
+  +-----------------------+------+-----+---------------------------+
+  | Attribute             | Type | NN  | Notes                     |
+  +-----------------------+------+-----+---------------------------+
+  | id                    | int  | PK  |                           |
+  | tokenable_type        | str  | NN  | always 'App\Models\User'  |
+  | tokenable_id          | int  | NN  | logical FK → USER.id      |
+  | name                  | str  | NN  | token label               |
+  | token                 | str  | NN  | UQ, SHA-256 hash, 64 chars|
+  | abilities             | text | N   | JSON: ["*"]               |
+  | last_used_at          | ts   | N   |                           |
+  | expires_at            | ts   | N   | NULL = never expires      |
+  | created_at            | ts   | NN  | auto                      |
+  | updated_at            | ts   | NN  | auto                      |
+  +-----------------------+------+-----+---------------------------+
+
+  Entity: DEVICE_SETTINGS
+  +--------------------------+-------+-----+------------------------+
+  | Attribute                | Type  | NN  | Notes                  |
+  +--------------------------+-------+-----+------------------------+
+  | id                       | int   | PK  |                        |
+  | device_name              | str   | NN  | UQ, logical key        |
+  | fan_mode                 | enum  | NN  | 'auto' or 'manual'     |
+  | fan_manual_state         | bool  | NN  | default false          |
+  | fan_auto_temp_threshold  | float | NN  | default 30.0 (°C)      |
+  | created_at               | ts    | NN  | auto                   |
+  | updated_at               | ts    | NN  | auto                   |
+  +--------------------------+-------+-----+------------------------+
+
+  Entity: TELEMETRY
+  +-----------------------+-------+-----+----------------------------+
+  | Attribute             | Type  | NN  | Notes                      |
+  +-----------------------+-------+-----+----------------------------+
+  | id                    | int   | PK  |                            |
+  | device_name           | str   | NN  | logical FK → DEVICE_SETTINGS|
+  | temperature           | float | NN  | °C                         |
+  | humidity              | float | NN  | %                          |
+  | air_pressure          | float | NN  | hPa                        |
+  | gas_kohm              | float | N   | kΩ, nullable               |
+  | light_lux             | float | N   | lux, nullable              |
+  | noise_db              | float | N   | dB, nullable               |
+  | fan_state             | bool  | NN  | default false              |
+  | created_at            | ts    | NN  | auto                       |
+  | updated_at            | ts    | NN  | auto                       |
+  +-----------------------+-------+-----+----------------------------+
+
+--------------------------------------------------------------------------------
+3.2  RELATIONSHIPS BETWEEN ENTITIES
+--------------------------------------------------------------------------------
+
+  Relationship R1: USER — OWNS — PERSONAL_ACCESS_TOKEN
+    Cardinality:    1 : N
+                    One USER can own zero or more PERSONAL_ACCESS_TOKENs.
+                    Every PERSONAL_ACCESS_TOKEN belongs to exactly one USER.
+    Participation:  USER           — partial (a user can exist without tokens)
+                    PAT            — total   (every token must belong to a user)
+    Implementation: PERSONAL_ACCESS_TOKEN.tokenable_id stores USER.id.
+                    tokenable_type stores the class name for polymorphism.
+    Note:           This relationship is enforced at the application level
+                    (Sanctum middleware) but NOT as a DB-level FOREIGN KEY
+                    constraint, because the polymorphic design (tokenable_type)
+                    prevents a standard FK to a single table.
+
+  Relationship R2: DEVICE_SETTINGS — CONFIGURES — TELEMETRY
+    Cardinality:    1 : N
+                    One DEVICE_SETTINGS row covers zero or more TELEMETRY rows.
+                    Every TELEMETRY row is associated with exactly one device.
+    Participation:  DEVICE_SETTINGS — partial (settings can exist before any data)
+                    TELEMETRY       — total   (every reading has a device_name)
+    Implementation: Both tables share the device_name string as a logical key.
+                    No DB-level FOREIGN KEY constraint exists — device_name in
+                    TELEMETRY is a plain VARCHAR. The DEVICE_SETTINGS row is
+                    auto-created by firstOrCreate() on first telemetry write, so
+                    in practice orphaned telemetry rows cannot occur at runtime.
+    Note:           The absence of a DB-level FK was a deliberate design choice:
+                    it allows an ESP32 to POST data before the dashboard has ever
+                    been opened, without needing a pre-existing settings row.
+
+--------------------------------------------------------------------------------
+3.3  E/R DIAGRAM (ASCII NOTATION)
+--------------------------------------------------------------------------------
+
+Cardinality symbols used:
+  ||    exactly one (mandatory, single)
+  |<    one-to-many (mandatory on the 'one' side)
+  o<    zero-to-many (optional on the 'one' side)
+  The crow's-foot is on the 'many' side.
+
+
+   USER                         PERSONAL_ACCESS_TOKEN
+  +------------------+          +----------------------------+
+  | PK  id           |          | PK  id                     |
+  |     name         |          |     tokenable_type         |
+  | UQ  email        |          |     tokenable_id  ------+  |
+  | UQ  username     |          | UQ  token                |  |
+  |     password     |          |     abilities            |  |
+  |     avatar       ||----o<   |     last_used_at         |  |
+  |     google_id    |  OWNS    |     expires_at           |  |
+  |     created_at   |          |     created_at           |  |
+  |     updated_at   |          |     updated_at           |  |
+  +------------------+          +----------------------------+
+        ^                                    |
+        +------------------------------------+
+              (logical: tokenable_id = USER.id)
+
+
+   DEVICE_SETTINGS                TELEMETRY
+  +---------------------------+   +----------------------------+
+  | PK  id                    |   | PK  id                     |
+  | UQ  device_name  ---------+-->|     device_name            |
+  |     fan_mode              |   |     temperature            |
+  |     fan_manual_state      |   |     humidity               |
+  |     fan_auto_temp_...  ||--o< |     air_pressure           |
+  |     created_at            |   |     gas_kohm  (nullable)   |
+  |     updated_at        CONF-   |     light_lux (nullable)   |
+  +---------------------------+   |     noise_db  (nullable)   |
+                                  |     fan_state              |
+                                  |     created_at             |
+                                  |     updated_at             |
+                                  +----------------------------+
+              (logical FK: TELEMETRY.device_name = DEVICE_SETTINGS.device_name)
+
+
+  Summary of relationships:
+
+  USER         ||----o<  PERSONAL_ACCESS_TOKEN  (1:N, via tokenable_id)
+  DEVICE_SETTINGS  ||----o<  TELEMETRY           (1:N, via device_name)
+
+  There is no direct relationship between USER and TELEMETRY, and no
+  direct relationship between USER and DEVICE_SETTINGS. The dashboard
+  user manages device settings via API calls (authenticated), but there
+  is no ownership FK at the DB level. Any authenticated user can control
+  any device — this is intentional for a single-household dashboard.
+
+================================================================================
+  SECTION 4 — LOGICAL SCHEMA (RELATIONAL MODEL)
+================================================================================
+
+The E/R model is transformed into a Relational (Logical) Schema by applying
+standard mapping rules. The result is a set of relation schemas expressed
+in standard notation:
+
+  TABLE_NAME ( attribute, attribute, ... )
+
+  Underline denotes PRIMARY KEY.
+  FK(attr) → TABLE.attr denotes a FOREIGN KEY.
+  Asterisk (*) after an attribute name denotes NULLABLE.
+
+--------------------------------------------------------------------------------
+4.1  TRANSFORMATION RULES APPLIED
+--------------------------------------------------------------------------------
+
+  Rule 1 — Strong Entity:
+    Each entity becomes a table. Its PK becomes the table's PK.
+    All attributes become columns.
+
+  Rule 2 — 1:N Relationship:
+    The FK is placed on the 'many' side (the child table).
+    It references the PK of the 'one' side (the parent table).
+    Applied to: PERSONAL_ACCESS_TOKEN (child of USER)
+                TELEMETRY (child of DEVICE_SETTINGS)
+
+  Rule 3 — Polymorphic Relationship (Sanctum-specific):
+    Instead of a single FK column, two columns encode the relationship:
+    tokenable_type (the class name) and tokenable_id (the PK value).
+    This is a Laravel/Sanctum convention, not standard relational theory.
+    In this project tokenable_type is always 'App\Models\User', so
+    (tokenable_type, tokenable_id) is functionally equivalent to a FK.
+
+  Rule 4 — Soft / Logical FK (device_name):
+    The relationship between DEVICE_SETTINGS and TELEMETRY is encoded
+    as a matching string column (device_name) rather than an integer FK.
+    Both columns have the same domain (VARCHAR). No DB-level FOREIGN KEY
+    constraint is declared, but the logical dependency is clear.
+
+--------------------------------------------------------------------------------
+4.2  RELATIONAL SCHEMA FOR EACH TABLE
+--------------------------------------------------------------------------------
+
+  USERS
+  (
+    id,
+    name,
+    username*,
+    email,
+    email_verified_at*,
+    password,
+    avatar*,
+    google_id*,
+    remember_token*,
+    created_at,
+    updated_at
+  )
+  PK: id
+  CK: email          (candidate key — unique constraint)
+  CK: username*      (candidate key where NOT NULL — unique constraint)
+
+  ─────────────────────────────────────────────────────────────────────────
+
+  PERSONAL_ACCESS_TOKENS
+  (
+    id,
+    tokenable_type,
+    tokenable_id,
+    name,
+    token,
+    abilities*,
+    last_used_at*,
+    expires_at*,
+    created_at,
+    updated_at
+  )
+  PK: id
+  CK: token          (candidate key — unique constraint, SHA-256 hash)
+  FK: (tokenable_type, tokenable_id) → USERS (logical polymorphic FK)
+      In concrete terms for this project: tokenable_id → USERS.id
+
+  ─────────────────────────────────────────────────────────────────────────
+
+  DEVICE_SETTINGS
+  (
+    id,
+    device_name,
+    fan_mode,
+    fan_manual_state,
+    fan_auto_temp_threshold,
+    created_at,
+    updated_at
+  )
+  PK: id
+  CK: device_name    (candidate key — unique constraint)
+
+  ─────────────────────────────────────────────────────────────────────────
+
+  TELEMETRIES
+  (
+    id,
+    device_name,
+    temperature,
+    humidity,
+    air_pressure,
+    gas_kohm*,
+    light_lux*,
+    noise_db*,
+    fan_state,
+    created_at,
+    updated_at
+  )
+  PK: id
+  FK: device_name → DEVICE_SETTINGS.device_name  (logical, not DB-enforced)
+
+  ─────────────────────────────────────────────────────────────────────────
+
+  INFRASTRUCTURE TABLES (Laravel scaffold — no application relationships)
+
+  PASSWORD_RESET_TOKENS ( email, token, created_at* )   PK: email
+  SESSIONS ( id, user_id*, ip_address*, user_agent*, payload, last_activity )
+            PK: id
+  CACHE ( key, value, expiration )                      PK: key
+  CACHE_LOCKS ( key, owner, expiration )                PK: key
+  JOBS ( id, queue, payload, attempts, reserved_at*,
+         available_at, created_at )                     PK: id
+  JOB_BATCHES ( id, name, total_jobs, pending_jobs,
+                failed_jobs, failed_job_ids, options*,
+                cancelled_at*, created_at, finished_at* ) PK: id
+  FAILED_JOBS ( id, uuid, connection, queue, payload,
+                exception, failed_at )                  PK: id
+
+--------------------------------------------------------------------------------
+4.3  KEY AND FOREIGN-KEY SUMMARY
+--------------------------------------------------------------------------------
+
+  Table                       PK          Candidate Keys     FK References
+  ─────────────────────────── ─────────── ────────────────── ───────────────────
+  users                       id          email, username    —
+  personal_access_tokens      id          token              tokenable_id→users
+  device_settings             id          device_name        —
+  telemetries                 id          —                  device_name→ds
+  password_reset_tokens       email       —                  —
+  sessions                    id          —                  —
+  cache                       key         —                  —
+  cache_locks                 key         —                  —
+  jobs                        id          —                  —
+  job_batches                 id          —                  —
+  failed_jobs                 id          uuid               —
+
+  ds = device_settings.device_name (logical FK)
+
+================================================================================
+  SECTION 5 — NORMALIZATION
+================================================================================
+
+Normalization is a process of structuring relational tables to reduce data
+redundancy and prevent update anomalies. It is applied through a series of
+rules called Normal Forms (NF), each one stricter than the previous.
+
+The four forms analysed here are: 1NF, 2NF, 3NF, and BCNF.
+
+Key terminology:
+  Functional Dependency (FD): B is functionally dependent on A if, for every
+    value of A, there is exactly one value of B. Written as: A → B.
+  Partial Dependency: a non-key attribute depends on PART of a composite PK.
+  Transitive Dependency: A → B and B → C, so indirectly A → C via B.
+  Candidate Key (CK): any minimal set of attributes that uniquely identifies
+    a row. There may be more than one per table.
+  Determinant: any attribute (or set) on the left side of an FD.
+
+--------------------------------------------------------------------------------
+5.1  FIRST NORMAL FORM (1NF)
+--------------------------------------------------------------------------------
+
+Definition:
+  A relation is in 1NF if and only if:
+    a) Every column contains only atomic (indivisible) values.
+    b) There are no repeating groups or arrays.
+    c) Every row is uniquely identifiable (a PK exists).
+
+Analysis per table:
+
+  USERS:
+    - All columns contain single scalar values. ✓
+    - No repeating group (e.g., multiple emails stored in one field). ✓
+    - PK: id (auto-increment, unique per row). ✓
+    → IN 1NF.
+
+  PERSONAL_ACCESS_TOKENS:
+    - abilities stores a JSON string (e.g., '["*"]'). Although this is
+      technically a serialized array stored as text, at the column level
+      the value is a single VARCHAR/TEXT atom. The column is not
+      multi-valued in the relational sense — it is one opaque string.
+      This is an accepted trade-off in real-world schema design. ✓
+    - PK: id. ✓
+    → IN 1NF.
+
+  DEVICE_SETTINGS:
+    - All columns are atomic scalars. fan_mode is an ENUM, which is
+      a single constrained string value. ✓
+    - PK: id. ✓
+    → IN 1NF.
+
+  TELEMETRIES:
+    - All sensor columns are atomic floats or booleans. ✓
+    - Nullable columns are still atomic (NULL is a single "unknown" value,
+      not a list). ✓
+    - PK: id. ✓
+    → IN 1NF.
+
+  ALL TABLES ARE IN 1NF. ✓
+
+--------------------------------------------------------------------------------
+5.2  SECOND NORMAL FORM (2NF)
+--------------------------------------------------------------------------------
+
+Definition:
+  A relation is in 2NF if:
+    a) It is already in 1NF.
+    b) Every non-key attribute is FULLY functionally dependent on the
+       ENTIRE primary key (no partial dependencies).
+
+  Note: Partial dependencies can only exist when the PK is COMPOSITE
+  (made of two or more attributes). If the PK is a single column,
+  a partial dependency is impossible by definition, so 1NF → 2NF
+  automatically.
+
+Analysis:
+  Every table in this schema has a single-column integer PK (id).
+  Therefore no partial dependency between a non-key attribute and a
+  SUBSET of the PK is possible — the PK has no subsets other than itself.
+
+  USERS:                    PK = {id}  → single column → no partial deps. ✓
+  PERSONAL_ACCESS_TOKENS:   PK = {id}  → single column → no partial deps. ✓
+  DEVICE_SETTINGS:          PK = {id}  → single column → no partial deps. ✓
+  TELEMETRIES:              PK = {id}  → single column → no partial deps. ✓
+
+  ALL TABLES IN 1NF ARE AUTOMATICALLY IN 2NF. ✓
+
+--------------------------------------------------------------------------------
+5.3  THIRD NORMAL FORM (3NF)
+--------------------------------------------------------------------------------
+
+Definition:
+  A relation is in 3NF if:
+    a) It is already in 2NF.
+    b) No non-key attribute is transitively dependent on the primary key
+       through another non-key attribute.
+       In other words: if A → B and B → C, and B is NOT a candidate key,
+       then C is transitively dependent on A via B — a violation.
+
+Analysis per table:
+
+  USERS:
+    FDs: id → name, id → username, id → email, id → password, ...
+    Is there any non-key attribute X such that X → another non-key attribute?
+    - email is a candidate key (UQ), so id → email and email → {name, ...}
+      represent valid FDs between candidate keys — not a transitive violation.
+    - No non-key attribute determines another non-key attribute. ✓
+    → IN 3NF.
+
+  PERSONAL_ACCESS_TOKENS:
+    FDs: id → tokenable_type, id → tokenable_id, id → token, ...
+    - token is a candidate key (UQ), so id → token and
+      token → {tokenable_type, tokenable_id, ...} — CK dependency, not
+      a transitive violation.
+    - tokenable_id does NOT determine abilities or last_used_at
+      (multiple tokens can belong to the same user with different abilities).
+    - No non-key determines another non-key transitively. ✓
+    → IN 3NF.
+
+  DEVICE_SETTINGS:
+    FDs: id → device_name, id → fan_mode, id → fan_manual_state,
+         id → fan_auto_temp_threshold.
+    Potential concern: does fan_mode → fan_manual_state or
+         fan_mode → fan_auto_temp_threshold?
+    - fan_mode takes values 'auto' or 'manual'. Knowing fan_mode = 'auto'
+      does NOT tell you the value of fan_auto_temp_threshold (it could be
+      25.0, 28.0, 30.0 — it varies per device). fan_mode is a selector
+      for which field to use, not a determinant of the field's value.
+    - Therefore fan_mode does NOT functionally determine fan_manual_state
+      or fan_auto_temp_threshold in the relational algebra sense.
+    - All non-key attributes depend only and directly on id. ✓
+    → IN 3NF.
+
+  TELEMETRIES:
+    FDs: id → device_name, id → temperature, id → humidity, ...
+    - device_name does NOT determine temperature or any other sensor value.
+      Many readings share the same device_name with different values.
+    - temperature does NOT determine humidity (independent sensor readings).
+    - No transitive dependencies. ✓
+    → IN 3NF.
+
+  ALL TABLES ARE IN 3NF. ✓
+
+--------------------------------------------------------------------------------
+5.5  VERDICT
+--------------------------------------------------------------------------------
+
+  Table                     1NF   2NF   3NF  
+  ──────────────────────── ───── ───── ───── 
+  users                      ✓     ✓     ✓  
+  personal_access_tokens     ✓     ✓     ✓  
+  device_settings            ✓     ✓     ✓  
+  telemetries                ✓     ✓     ✓  
+
+================================================================================
+  END OF DOCUMENT
+================================================================================

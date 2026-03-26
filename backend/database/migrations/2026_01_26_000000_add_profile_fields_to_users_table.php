@@ -1,0 +1,30 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            $table->string('username')->nullable()->unique()->after('name');
+            $table->string('avatar')->nullable()->after('username');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            if (Schema::hasColumn('users', 'avatar')) {
+                $table->dropColumn('avatar');
+            }
+            if (Schema::hasColumn('users', 'username')) {
+                // Index name created by ->unique() is users_username_unique
+                $table->dropUnique('users_username_unique');
+                $table->dropColumn('username');
+            }
+        });
+    }
+};
