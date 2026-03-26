@@ -50,20 +50,12 @@ https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32
 
 ### 2 — Configure credentials
 
-```bash
-cp config.example.h config.h
-```
-
-Edit `config.h` and fill in:
-
 ```cpp
 #define WIFI_SSID      "your_wifi_ssid"
 #define WIFI_PASSWORD  "your_wifi_password"
 #define API_BASE_URL   "https://hhero.up.railway.app/api"
 #define DEVICE_NAME    "esp32_living_room"
 ```
-
-> ⚠️ `config.h` is listed in `.gitignore` — it will never be pushed to the repository.
 
 ### 3 — Flash
 

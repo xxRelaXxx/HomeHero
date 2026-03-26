@@ -50,12 +50,6 @@ https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32
 
 ### 2 — Configura le credenziali
 
-```bash
-cp config.example.h config.h
-```
-
-Modifica `config.h` con i tuoi dati:
-
 ```cpp
 #define WIFI_SSID      "nome_rete_wifi"
 #define WIFI_PASSWORD  "password_wifi"
