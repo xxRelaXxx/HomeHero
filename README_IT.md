@@ -37,7 +37,7 @@
 ```
 ┌────────────────────────────────────────────────────────────────────┐
 │                       Dispositivo ESP32                            │
-│   BME680 · BH1750 · INMP441 · 2× display OLED · relay ventola   │
+│   BME680 · BH1750 · INMP441 · 2× display OLED · relay ventola      │
 │              POST /api/device/data  ogni 10 s                      │
 └────────────────────────────┬───────────────────────────────────────┘
                              │ HTTPS
@@ -52,10 +52,10 @@
 ┌─────────────────────────┐      ┌──────────────────────────────────┐
 │  PostgreSQL (Supabase)  │      │          React Dashboard         │
 │                         │      │  Vite 7 · Tailwind 4 · Recharts  │
-│  users                  │      │  Login / Registrazione            │
-│  telemetries            │      │  Card sensori · Grafici timeline  │
-│  device_settings        │      │  Controllo ventola · Profilo      │
-│  personal_access_tokens │      │  Ospitato su Netlify              │
+│  users                  │      │  Login / Registrazione           │
+│  telemetries            │      │  Card sensori · Grafici timeline │
+│  device_settings        │      │  Controllo ventola · Profilo     │
+│  personal_access_tokens │      │  Ospitato su Netlify             │
 └─────────────────────────┘      └──────────────────────────────────┘
 ```
 
@@ -141,6 +141,8 @@ HomeHero/
 
 ### Backend (Laravel API)
 
+Installa composer: https://getcomposer.org/download/
+
 ```bash
 cd backend
 
@@ -165,6 +167,8 @@ docker-compose up --build   # → http://localhost:8000/api
 
 ### Frontend (React + Vite)
 
+Installa node: https://nodejs.org/en/download
+
 ```bash
 cd frontend
 
@@ -178,6 +182,8 @@ npm run dev                 # → http://localhost:5173
 ```
 
 ### Firmware (ESP32)
+
+Installa Arduino IDE: https://www.arduino.cc/en/software/
 
 ```bash
 # 1. Vai nella cartella firmware
