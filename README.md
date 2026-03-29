@@ -191,11 +191,9 @@ Install Arduino IDE: https://docs.arduino.cc/software/ide/
 # 1. Navigate to the firmware folder
 cd firmware
 
-# 2. Create your config file from the template
-cp config.example.h config.h
-# Edit config.h: set WIFI_SSID, WIFI_PASSWORD, API_BASE_URL, DEVICE_NAME
+# Edit sketch: set WIFI_SSID, WIFI_PASSWORD, API_BASE_URL, DEVICE_NAME
 
-# 3. Open sketch.cpp in Arduino IDE
+# 3. Open sketch.cpp/.ino in Arduino IDE
 #    Board: ESP32 Dev Module  |  Baud rate: 115200
 #    Install libraries listed in libraries.txt
 
