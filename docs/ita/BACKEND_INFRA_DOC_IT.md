@@ -4,7 +4,7 @@
 > **Project:** Home Hero — Stazione Intelligente di Monitoraggio Ambientale  
 > **Backend:** REST API Laravel 12, distribuita su Railway  
 > **Database:** PostgreSQL tramite Supabase  
-> **Team:** Roman (Backend e Architettura) · Luka (Frontend) · Shaeek (Hardware) · Matteo (QA/Documentazione) · De Togni (UI/UX e PM)
+> **Team:** Roman (Backend e Architettura) · Luka (Frontend e PM) · Shaeek (Hardware) · Matteo (QA/Documentazione) · De Togni (UI/UX)
 
 ---
 
