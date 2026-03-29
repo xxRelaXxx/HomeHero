@@ -39,7 +39,7 @@
 ```
 ┌────────────────────────────────────────────────────────────────────┐
 │                          ESP32 Device                              │
-│   BME680 · BH1750 · INMP441 · 2× OLED displays · Fan relay       │
+│   BME680 · BH1750 · INMP441 · 2× OLED displays · Fan relay         │
 │                POST /api/device/data  every 10 s                   │
 └────────────────────────────┬───────────────────────────────────────┘
                              │ HTTPS
@@ -54,10 +54,10 @@
 ┌─────────────────────────┐      ┌──────────────────────────────────┐
 │  PostgreSQL (Supabase)  │      │       React Dashboard            │
 │                         │      │  Vite 7 · Tailwind 4 · Recharts  │
-│  users                  │      │  Login / Register                 │
-│  telemetries            │      │  Sensor cards · Timeline charts   │
-│  device_settings        │      │  Fan control · User profile       │
-│  personal_access_tokens │      │  Hosted on Netlify                │
+│  users                  │      │  Login / Register                │
+│  telemetries            │      │  Sensor cards · Timeline charts  │
+│  device_settings        │      │  Fan control · User profile      │
+│  personal_access_tokens │      │  Hosted on Netlify               │
 └─────────────────────────┘      └──────────────────────────────────┘
 ```
 
